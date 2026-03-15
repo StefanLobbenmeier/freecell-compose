@@ -110,19 +110,24 @@ fun App() {
             }
 
             val progress = Animatable(0f)
-            autoAnim = AutoAnim(
-                move = move,
-                from = extracted.from,
-                card = extracted.card,
-                fromRect = fromRect,
-                toRect = toRect,
-                progress = progress,
-            )
-            progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
+            try {
+                autoAnim = AutoAnim(
+                    move = move,
+                    from = extracted.from,
+                    card = extracted.card,
+                    fromRect = fromRect,
+                    toRect = toRect,
+                    progress = progress,
+                )
+                progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
+            } finally {
+                // When the move is applied, the state changes and this effect restarts.
+                // Clear the animation first so we don't get stuck in "autoAnim != null".
+                autoAnim = null
+            }
+
             store.tryMove(move)
-            delay(30)
-            autoAnim = null
-            delay(40)
+            delay(60)
         }
 
         BoxWithConstraints(
