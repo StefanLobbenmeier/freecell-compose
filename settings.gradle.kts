@@ -1,4 +1,4 @@
-rootProject.name = "freecell_compose"
+rootProject.name = "freecell-compose"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
