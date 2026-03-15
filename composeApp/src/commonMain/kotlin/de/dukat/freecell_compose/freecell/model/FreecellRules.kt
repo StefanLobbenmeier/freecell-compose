@@ -155,8 +155,6 @@ fun applyMove(state: GameState, move: Move): Result<GameState> {
             val bottom = moving.first()
             if (!canPlaceOnTableau(bottom, dest.lastOrNull())) return Result.failure(IllegalArgumentException(MoveError.DestinationNotCompatible.name))
             if (moving.size > 1) {
-                val fromCol = (move.from as? PileId.Tableau)?.index
-                    ?: return Result.failure(IllegalArgumentException(MoveError.InvalidSource.name))
                 if (!capacityAllows(state, to.index, moving.size)) {
                     return Result.failure(IllegalArgumentException(MoveError.MoveTooLargeForCapacity.name))
                 }

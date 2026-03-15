@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,20 +62,18 @@ import de.dukat.freecell_compose.freecell.model.GameState
 import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
-import de.dukat.freecell_compose.freecell.model.analyze
-import de.dukat.freecell_compose.freecell.model.applyMove
-import de.dukat.freecell_compose.freecell.model.newGame
+import de.dukat.freecell_compose.freecell.FreecellStore
 import kotlin.math.roundToInt
 
 @Composable
 fun App() {
     MaterialTheme {
-        val history = remember { ArrayDeque<GameState>() }
-        var state by remember { mutableStateOf(newGame()) }
+        val store = remember { FreecellStore() }
+        val ui by store.uiState.collectAsState()
+        val state = ui.state
+        val analysis = ui.analysis
         var seedText by remember { mutableStateOf("") }
-        var message by remember { mutableStateOf<String?>(null) }
-
-        val analysis = remember(state) { analyze(state) }
+        val message = ui.message
         val drag = remember { mutableStateOf<DragState?>(null) }
         val pileRects = remember { PileRects() }
 
@@ -84,7 +83,11 @@ fun App() {
                 .background(Color(0xFF0E3B2B))
         ) {
             val compactTop = maxWidth < 560.dp
-            val pagePadding = if (maxWidth < 420.dp) 8.dp else 16.dp
+            val pagePadding = when {
+                maxWidth < 340.dp -> 4.dp
+                maxWidth < 420.dp -> 8.dp
+                else -> 16.dp
+            }
 
             // Keep all 8 tableau columns visible by scaling the whole board's measurements.
             val baseCardW = 80.dp
@@ -96,7 +99,7 @@ fun App() {
 
             val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
             val fitScale = (availableW / requiredTableauW).coerceAtMost(1f)
-            val s = fitScale.coerceAtLeast(0.28f)
+            val s = fitScale.coerceAtLeast(0.06f)
 
             val cardW = baseCardW * s
             val cardH = baseCardH * s
@@ -143,25 +146,19 @@ fun App() {
                                     modifier = Modifier.width(140.dp),
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Button(onClick = {
-                                    val seed = seedText.toIntOrNull()
-                                    history.clear()
-                                    state = newGame(seed)
-                                    message = null
-                                }) { Text("New") }
-                                Spacer(Modifier.width(8.dp))
-                                Button(
-                                    onClick = {
-                                        val prev = history.removeLastOrNull()
-                                        if (prev != null) {
-                                            state = prev
-                                            message = null
-                                        }
-                                    },
-                                    enabled = history.isNotEmpty(),
-                                ) { Text("Undo") }
-                            }
-                        }
+                        Button(onClick = {
+                            val seed = seedText.toIntOrNull()
+                            store.newGame(seed)
+                        }) { Text("New") }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                store.undo()
+                            },
+                            enabled = ui.canUndo,
+                        ) { Text("Undo") }
+                    }
+                }
                     } else {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -192,32 +189,26 @@ fun App() {
                                     modifier = Modifier.width(120.dp),
                                 )
                                 Spacer(Modifier.width(8.dp))
-                                Button(onClick = {
-                                    val seed = seedText.toIntOrNull()
-                                    history.clear()
-                                    state = newGame(seed)
-                                    message = null
-                                }) { Text("New") }
-                                Spacer(Modifier.width(8.dp))
-                                Button(
-                                    onClick = {
-                                        val prev = history.removeLastOrNull()
-                                        if (prev != null) {
-                                            state = prev
-                                            message = null
-                                        }
-                                    },
-                                    enabled = history.isNotEmpty(),
-                                ) { Text("Undo") }
-                            }
-                        }
-                    }
+                Button(onClick = {
+                    val seed = seedText.toIntOrNull()
+                    store.newGame(seed)
+                }) { Text("New") }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        store.undo()
+                    },
+                    enabled = ui.canUndo,
+                ) { Text("Undo") }
+            }
+        }
+    }
 
                     Spacer(Modifier.height(12.dp))
 
                     if (message != null) {
                         Text(
-                            text = message!!,
+                            text = message,
                             color = Color(0xFFF2E8D5),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -225,17 +216,7 @@ fun App() {
                         )
                     }
 
-                fun tryMove(move: Move) {
-                    val r = applyMove(state, move)
-                    val next = r.getOrNull()
-                    if (next != null) {
-                        history.addLast(state)
-                        state = next
-                        message = null
-                    } else {
-                        message = r.exceptionOrNull()?.message ?: "Illegal move"
-                    }
-                }
+                fun tryMove(move: Move) = store.tryMove(move)
 
                     // Top row: freecells + foundations
                     Row(
