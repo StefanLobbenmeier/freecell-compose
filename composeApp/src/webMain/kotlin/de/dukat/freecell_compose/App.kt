@@ -29,8 +29,13 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -76,6 +81,45 @@ fun App() {
         val message = ui.message
         val drag = remember { mutableStateOf<DragState?>(null) }
         val pileRects = remember { PileRects() }
+        val cardRects = remember { CardRects() }
+        var autoAnim by remember { mutableStateOf<AutoAnim?>(null) }
+
+        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoAnim) {
+            if (drag.value != null) return@LaunchedEffect
+            if (autoAnim != null) return@LaunchedEffect
+
+            val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
+
+            // Wait for layout to produce rects.
+            var fromRect: Rect? = null
+            var toRect: Rect? = null
+            repeat(6) {
+                fromRect = cardRects.get(startForMove(state, move))
+                toRect = pileRects.get(move.to)
+                if (fromRect != null && toRect != null) return@repeat
+                withFrameNanos { }
+            }
+
+            val extracted = extractAutoMoveCard(state, move)
+            if (extracted == null || toRect == null || fromRect == null) {
+                store.tryMove(move)
+                return@LaunchedEffect
+            }
+
+            val progress = Animatable(0f)
+            autoAnim = AutoAnim(
+                move = move,
+                from = extracted.from,
+                card = extracted.card,
+                fromRect = fromRect,
+                toRect = toRect,
+                progress = progress,
+            )
+            progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
+            autoAnim = null
+            store.tryMove(move)
+            delay(60)
+        }
 
         BoxWithConstraints(
             modifier = Modifier
@@ -234,9 +278,11 @@ fun App() {
                                 analysis = analysis,
                                 drag = drag,
                                 pileRects = pileRects,
+                                cardRects = cardRects,
                                 onMove = ::tryMove,
                                 highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
                                 dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
+                                hideCard = autoAnim?.from == CardRef(PileId.FreeCell(i), 0),
                             )
                         }
                     }
@@ -252,6 +298,7 @@ fun App() {
                                 analysis = analysis,
                                 drag = drag,
                                 pileRects = pileRects,
+                                cardRects = cardRects,
                                 onMove = ::tryMove,
                                 highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
                                 dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
@@ -277,13 +324,34 @@ fun App() {
                             analysis = analysis,
                             drag = drag,
                             pileRects = pileRects,
+                            cardRects = cardRects,
                             onMove = ::tryMove,
                             highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
                             dim = isDimmingPile(drag.value, PileId.Tableau(col)),
+                            hiddenCard = autoAnim?.from,
                         )
                     }
                     }
             }
+
+                // Auto-solve overlay animation
+                val a = autoAnim
+                if (a != null) {
+                    val t = a.progress.value.coerceIn(0f, 1f)
+                    val from = a.fromRect.topLeft
+                    val to = a.toRect.topLeft
+                    val pos = Offset(
+                        x = from.x + (to.x - from.x) * t,
+                        y = from.y + (to.y - from.y) * t,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(pos.x.roundToInt(), pos.y.roundToInt()) }
+                            .alpha(0.98f)
+                    ) {
+                        CardFace(card = a.card, width = cardW, height = cardH)
+                    }
+                }
 
                 // Drag overlay
                 val d = drag.value
@@ -345,7 +413,55 @@ private class PileRects {
         }
         return best?.first
     }
+
+    fun get(id: PileId): Rect? = rects[id]
 }
+
+private class CardRects {
+    private val rects: MutableMap<CardRef, Rect> = linkedMapOf()
+
+    fun set(ref: CardRef, rect: Rect) {
+        rects[ref] = rect
+    }
+
+    fun get(ref: CardRef?): Rect? {
+        if (ref == null) return null
+        return rects[ref]
+    }
+}
+
+private data class AutoAnim(
+    val move: Move,
+    val from: CardRef,
+    val card: Card,
+    val fromRect: Rect,
+    val toRect: Rect,
+    val progress: Animatable<Float, *>,
+)
+
+private data class AutoMoveCard(
+    val from: CardRef,
+    val card: Card,
+)
+
+private fun extractAutoMoveCard(state: GameState, move: Move): AutoMoveCard? {
+    return when (val from = move.from) {
+        is PileId.Tableau -> {
+            val col = state.tableau[from.index]
+            val card = col.lastOrNull() ?: return null
+            AutoMoveCard(from = CardRef(from, col.lastIndex), card = card)
+        }
+
+        is PileId.FreeCell -> {
+            val card = state.freeCells[from.index] ?: return null
+            AutoMoveCard(from = CardRef(from, 0), card = card)
+        }
+
+        is PileId.Foundation -> null
+    }
+}
+
+private fun startForMove(state: GameState, move: Move): CardRef? = extractAutoMoveCard(state, move)?.from
 
 @Composable
 private fun PileSlot(
@@ -357,9 +473,11 @@ private fun PileSlot(
     analysis: Analysis,
     drag: MutableState<DragState?>,
     pileRects: PileRects,
+    cardRects: CardRects,
     onMove: (Move) -> Unit,
     highlight: Boolean,
     dim: Boolean,
+    hideCard: Boolean = false,
 ) {
     val card = when (id) {
         is PileId.FreeCell -> state.freeCells[id.index]
@@ -404,6 +522,7 @@ private fun PileSlot(
                 analysis = analysis,
                 drag = drag,
                 pileRects = pileRects,
+                cardRects = cardRects,
                 enabled = canStart,
                 onMove = onMove,
             ) {
@@ -412,7 +531,13 @@ private fun PileSlot(
                     width = cardW,
                     height = cardH,
                     dim = !canStart && !ghost,
-                    modifier = Modifier.alpha(if (ghost) 0.25f else 1f)
+                    modifier = Modifier.alpha(
+                        when {
+                            hideCard -> 0f
+                            ghost -> 0.25f
+                            else -> 1f
+                        }
+                    )
                 )
             }
         }
@@ -429,9 +554,11 @@ private fun TableauColumn(
     analysis: Analysis,
     drag: MutableState<DragState?>,
     pileRects: PileRects,
+    cardRects: CardRects,
     onMove: (Move) -> Unit,
     highlight: Boolean,
     dim: Boolean,
+    hiddenCard: CardRef? = null,
 ) {
     val cards = state.tableau[col]
     val alpha = when {
@@ -479,6 +606,7 @@ private fun TableauColumn(
                             analysis = analysis,
                             drag = drag,
                             pileRects = pileRects,
+                            cardRects = cardRects,
                             enabled = canStart,
                             onMove = onMove,
                         ) {
@@ -487,7 +615,13 @@ private fun TableauColumn(
                                 width = cardW,
                                 height = cardH,
                                 dim = !canStart && !ghost,
-                                modifier = Modifier.alpha(if (ghost) 0.25f else 1f)
+                                modifier = Modifier.alpha(
+                                    when {
+                                        hiddenCard == start -> 0f
+                                        ghost -> 0.25f
+                                        else -> 1f
+                                    }
+                                )
                             )
                         }
                     }
@@ -526,6 +660,7 @@ private fun DraggableCardStart(
     analysis: Analysis,
     drag: MutableState<DragState?>,
     pileRects: PileRects,
+    cardRects: CardRects,
     enabled: Boolean = true,
     onMove: (Move) -> Unit,
     content: @Composable () -> Unit,
@@ -536,6 +671,8 @@ private fun DraggableCardStart(
         modifier = Modifier
             .onGloballyPositioned { coords ->
                 topLeftRoot = coords.positionInRoot()
+                val rect = Rect(topLeftRoot, Size(coords.size.width.toFloat(), coords.size.height.toFloat()))
+                cardRects.set(start, rect)
             }
             .pointerInput(enabled, moves) {
                 if (!enabled || moves.isEmpty()) return@pointerInput

@@ -10,6 +10,40 @@ class FreecellRulesTest {
     private fun emptyFoundations(): Map<Suit, List<Card>> = Suit.entries.associateWith { emptyList() }
 
     @Test
+    fun isSafeToMoveToFoundation_allowsAcesAndTwos() {
+        val state = GameState(
+            tableau = List(8) { emptyList() },
+            freeCells = List(4) { null },
+            foundations = emptyFoundations(),
+        )
+
+        assertTrue(isSafeToMoveToFoundation(state, Card(Suit.Clubs, 1)))
+        assertTrue(isSafeToMoveToFoundation(state, Card(Suit.Diamonds, 2)))
+    }
+
+    @Test
+    fun isSafeToMoveToFoundation_requiresOppositeColorProgressForHigherRanks() {
+        val state = GameState(
+            tableau = List(8) { emptyList() },
+            freeCells = List(4) { null },
+            foundations = mapOf(
+                Suit.Clubs to listOf(Card(Suit.Clubs, 1)),
+                Suit.Spades to listOf(Card(Suit.Spades, 1)),
+                Suit.Diamonds to listOf(Card(Suit.Diamonds, 1)),
+                Suit.Hearts to listOf(Card(Suit.Hearts, 1)),
+            ),
+        )
+
+        // 3 of clubs is only safe when both red foundations reached at least 1 (>= 3-2)
+        assertTrue(isSafeToMoveToFoundation(state, Card(Suit.Clubs, 3)))
+
+        val blocked = state.copy(
+            foundations = state.foundations + (Suit.Hearts to emptyList())
+        )
+        assertTrue(!isSafeToMoveToFoundation(blocked, Card(Suit.Clubs, 3)))
+    }
+
+    @Test
     fun analyze_recalculatesMultiCardMoveWhenCapacityChanges() {
         val stateBefore = GameState(
             tableau = listOf(

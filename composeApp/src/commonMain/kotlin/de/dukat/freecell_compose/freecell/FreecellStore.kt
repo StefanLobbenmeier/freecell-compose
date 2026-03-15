@@ -51,4 +51,14 @@ class FreecellStore(initial: GameState = newModelGame()) {
             uiState.value = uiState.value.copy(message = r.exceptionOrNull()?.message ?: "Illegal move")
         }
     }
+
+    fun tryAutoSolveStep(): Move? {
+        val cur = uiState.value.state
+        val a = uiState.value.analysis
+        val move = a.safeFoundationMoves.firstOrNull() ?: return null
+        val next = applyMove(cur, move).getOrNull() ?: return null
+        history.addLast(cur)
+        uiState.value = UiState(state = next, analysis = analyze(next), message = null, canUndo = true)
+        return move
+    }
 }

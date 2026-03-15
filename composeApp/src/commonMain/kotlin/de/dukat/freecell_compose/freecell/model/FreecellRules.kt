@@ -20,7 +20,23 @@ data class Analysis(
     val legalMoves: List<Move>,
     val movableStarts: Set<CardRef>,
     val movesFrom: Map<CardRef, List<Move>>,
+    val safeFoundationMoves: List<Move>,
 )
+
+fun isSafeToMoveToFoundation(state: GameState, card: Card): Boolean {
+    if (card.rank <= 2) return true
+
+    val oppositeSuits = if (card.suit.isRed) {
+        listOf(Suit.Clubs, Suit.Spades)
+    } else {
+        listOf(Suit.Diamonds, Suit.Hearts)
+    }
+    val minOppTop = oppositeSuits.minOf { suit -> state.foundations.getValue(suit).lastOrNull()?.rank ?: 0 }
+    // Heuristic: moving rank r to the foundation is considered safe when both opposite-color
+    // foundations have progressed to at least r-2, so their (r-1) cards won't need this card
+    // as a tableau landing spot.
+    return minOppTop >= card.rank - 2
+}
 
 fun newGame(seed: Int? = null): GameState {
     val deck = buildDeck()
@@ -129,10 +145,26 @@ fun analyze(state: GameState): Analysis {
     }
 
     val movableStarts = movesFrom.keys.toSet()
+
+    val safeFoundationMoves = moves
+        .asSequence()
+        .filter { it.to is PileId.Foundation }
+        .mapNotNull { move ->
+            val card = when (val from = move.from) {
+                is PileId.Tableau -> state.tableau[from.index].lastOrNull()
+                is PileId.FreeCell -> state.freeCells[from.index]
+                is PileId.Foundation -> null
+            } ?: return@mapNotNull null
+
+            if (isSafeToMoveToFoundation(state, card)) move else null
+        }
+        .toList()
+
     return Analysis(
         legalMoves = moves,
         movableStarts = movableStarts,
         movesFrom = movesFrom.mapValues { it.value.toList() },
+        safeFoundationMoves = safeFoundationMoves,
     )
 }
 
