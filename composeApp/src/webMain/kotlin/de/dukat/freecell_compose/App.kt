@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -36,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -45,6 +47,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.dukat.freecell_compose.ui.toPlayingCardVector
 import de.dukat.freecell_compose.freecell.model.Analysis
 import de.dukat.freecell_compose.freecell.model.Card
 import de.dukat.freecell_compose.freecell.model.CardRef
@@ -519,55 +522,33 @@ private fun CardFace(
     height: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val rankText = when (card.rank) {
-        1 -> "A"
-        11 -> "J"
-        12 -> "Q"
-        13 -> "K"
-        else -> card.rank.toString()
-    }
-    val suitText = when (card.suit) {
-        Suit.Clubs -> "C"
-        Suit.Diamonds -> "D"
-        Suit.Hearts -> "H"
-        Suit.Spades -> "S"
-    }
-    val fg = if (card.isRed) Color(0xFFB1122A) else Color(0xFF101010)
+    val vector = card.toPlayingCardVector()
+    PlayingCardVector(
+        vector = vector,
+        width = width,
+        height = height,
+        modifier = modifier,
+    )
+}
 
-    Box(
+@Composable
+private fun PlayingCardVector(
+    vector: ImageVector,
+    width: Dp,
+    height: Dp,
+    modifier: Modifier = Modifier,
+) {
+    Icon(
+        imageVector = vector,
+        contentDescription = null,
+        tint = Color.Unspecified,
         modifier = modifier
             .width(width)
             .height(height)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF7F4EE))
-            .border(1.dp, Color(0xFF0D0D0D), RoundedCornerShape(12.dp))
-            .padding(8.dp)
-    ) {
-        Text(
-            text = "$rankText$suitText",
-            color = fg,
-            fontFamily = FontFamily.Serif,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp,
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0x11000000))
-                .aspectRatio(1f)
-                .padding(6.dp)
-        ) {
-            Text(
-                text = suitText,
-                color = fg,
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                modifier = Modifier.align(Alignment.Center),
-            )
-        }
-    }
+            .background(Color.Transparent)
+            .border(1.dp, Color(0x22000000), RoundedCornerShape(12.dp)),
+    )
 }
 
 private fun isHighlightingPile(d: DragState?, id: PileId): Boolean {
