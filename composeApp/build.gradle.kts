@@ -59,6 +59,18 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "FreeCell"
             packageVersion = "1.0.0"
+
+            macOS {
+                iconFile.set(project.file("src/desktopMain/resources/icons/app.icns"))
+            }
+
+            windows {
+                iconFile.set(project.file("src/desktopMain/resources/icons/app.png"))
+            }
+
+            linux {
+                iconFile.set(project.file("src/desktopMain/resources/icons/app.png"))
+            }
         }
     }
 }
