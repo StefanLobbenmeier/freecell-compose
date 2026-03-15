@@ -4,10 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,81 +78,152 @@ fun App() {
         val drag = remember { mutableStateOf<DragState?>(null) }
         val pileRects = remember { PileRects() }
 
-        val cardW = 80.dp
-        val cardH = 112.dp
-        val tableGapY = 22.dp
-        val stackGapY = 18.dp
-
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF0E3B2B))
-                .padding(16.dp)
         ) {
-            Column(
+            val compactTop = maxWidth < 560.dp
+            val pagePadding = if (maxWidth < 420.dp) 8.dp else 16.dp
+
+            // Keep all 8 tableau columns visible by scaling the whole board's measurements.
+            val baseCardW = 80.dp
+            val baseCardH = 112.dp
+            val baseGapX = 10.dp
+            val baseTableGapY = 22.dp
+            val baseStackGapY = 18.dp
+            val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
+
+            val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
+            val fitScale = (availableW / requiredTableauW).coerceAtMost(1f)
+            val s = fitScale.coerceAtLeast(0.28f)
+
+            val cardW = baseCardW * s
+            val cardH = baseCardH * s
+            val gapX = baseGapX * s
+            val tableGapY = baseTableGapY * s
+            val stackGapY = baseStackGapY * s
+
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .padding(pagePadding)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "FreeCell",
-                            color = Color(0xFFF2E8D5),
-                            fontFamily = FontFamily.Serif,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        if (state.isWon) {
-                            Text("You won!", color = Color(0xFFF2E8D5), fontWeight = FontWeight.Bold)
+                    if (!compactTop) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "FreeCell",
+                                    color = Color(0xFFF2E8D5),
+                                    fontFamily = FontFamily.Serif,
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                if (state.isWon) {
+                                    Text("You won!", color = Color(0xFFF2E8D5), fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = seedText,
+                                    onValueChange = { seedText = it.filter { ch -> ch.isDigit() || ch == '-' }.take(11) },
+                                    label = { Text("Seed") },
+                                    singleLine = true,
+                                    modifier = Modifier.width(140.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Button(onClick = {
+                                    val seed = seedText.toIntOrNull()
+                                    history.clear()
+                                    state = newGame(seed)
+                                    message = null
+                                }) { Text("New") }
+                                Spacer(Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        val prev = history.removeLastOrNull()
+                                        if (prev != null) {
+                                            state = prev
+                                            message = null
+                                        }
+                                    },
+                                    enabled = history.isNotEmpty(),
+                                ) { Text("Undo") }
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "FreeCell",
+                                    color = Color(0xFFF2E8D5),
+                                    fontFamily = FontFamily.Serif,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                if (state.isWon) {
+                                    Text("You won!", color = Color(0xFFF2E8D5), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                OutlinedTextField(
+                                    value = seedText,
+                                    onValueChange = { seedText = it.filter { ch -> ch.isDigit() || ch == '-' }.take(11) },
+                                    label = { Text("Seed") },
+                                    singleLine = true,
+                                    modifier = Modifier.width(120.dp),
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Button(onClick = {
+                                    val seed = seedText.toIntOrNull()
+                                    history.clear()
+                                    state = newGame(seed)
+                                    message = null
+                                }) { Text("New") }
+                                Spacer(Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        val prev = history.removeLastOrNull()
+                                        if (prev != null) {
+                                            state = prev
+                                            message = null
+                                        }
+                                    },
+                                    enabled = history.isNotEmpty(),
+                                ) { Text("Undo") }
+                            }
                         }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = seedText,
-                            onValueChange = { seedText = it.filter { ch -> ch.isDigit() || ch == '-' }.take(11) },
-                            label = { Text("Seed") },
-                            singleLine = true,
-                            modifier = Modifier.width(140.dp),
+                    Spacer(Modifier.height(12.dp))
+
+                    if (message != null) {
+                        Text(
+                            text = message!!,
+                            color = Color(0xFFF2E8D5),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
                         )
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
-                            val seed = seedText.toIntOrNull()
-                            history.clear()
-                            state = newGame(seed)
-                            message = null
-                        }) { Text("New") }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                val prev = history.removeLastOrNull()
-                                if (prev != null) {
-                                    state = prev
-                                    message = null
-                                }
-                            },
-                            enabled = history.isNotEmpty(),
-                        ) { Text("Undo") }
                     }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                if (message != null) {
-                    Text(
-                        text = message!!,
-                        color = Color(0xFFF2E8D5),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    )
-                }
 
                 fun tryMove(move: Move) {
                     val r = applyMove(state, move)
@@ -164,12 +237,12 @@ fun App() {
                     }
                 }
 
-                // Top row: freecells + foundations
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    // Top row: freecells + foundations
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
                         for (i in 0 until 4) {
                             PileSlot(
                                 id = PileId.FreeCell(i),
@@ -187,7 +260,7 @@ fun App() {
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
                         for (suit in Suit.entries) {
                             PileSlot(
                                 id = PileId.Foundation(suit),
@@ -204,15 +277,15 @@ fun App() {
                             )
                         }
                     }
-                }
+                    }
 
                 Spacer(Modifier.height(tableGapY))
 
-                // Tableaus
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+                    // Tableaus
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(gapX),
+                    ) {
                     for (col in 0 until 8) {
                         TableauColumn(
                             col = col,
@@ -228,34 +301,35 @@ fun App() {
                             dim = isDimmingPile(drag.value, PileId.Tableau(col)),
                         )
                     }
-                }
+                    }
             }
 
-            // Drag overlay
-            val d = drag.value
-            if (d != null) {
-                val alpha = 0.96f
-                val px = d.pointer
-                val offset = px - d.grabOffsetLocal
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-                        .alpha(alpha)
-                ) {
-                    val stackH = if (d.cards.isEmpty()) cardH else (cardH + (stackGapY * (d.cards.size - 1)))
+                // Drag overlay
+                val d = drag.value
+                if (d != null) {
+                    val alpha = 0.96f
+                    val px = d.pointer
+                    val offset = px - d.grabOffsetLocal
                     Box(
                         modifier = Modifier
-                            .width(cardW)
-                            .height(stackH)
+                            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+                            .alpha(alpha)
                     ) {
-                        for ((i, card) in d.cards.withIndex()) {
-                            CardFace(
-                                card = card,
-                                width = cardW,
-                                height = cardH,
-                                modifier = Modifier
-                                    .offset(y = stackGapY * i)
-                            )
+                        val stackH = if (d.cards.isEmpty()) cardH else (cardH + (stackGapY * (d.cards.size - 1)))
+                        Box(
+                            modifier = Modifier
+                                .width(cardW)
+                                .height(stackH)
+                        ) {
+                            for ((i, card) in d.cards.withIndex()) {
+                                CardFace(
+                                    card = card,
+                                    width = cardW,
+                                    height = cardH,
+                                    modifier = Modifier
+                                        .offset(y = stackGapY * i)
+                                )
+                            }
                         }
                     }
                 }
