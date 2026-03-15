@@ -9,10 +9,6 @@ plugins {
 group = "de.dukat"
 version = "unspecified"
 
-repositories {
-    mavenCentral()
-}
-
 kotlin {
     js {
         browser()
@@ -25,8 +21,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-
-            implementation(libs.compose.components.resources)
+            implementation(libs.compose.ui)
         }
 
     }
