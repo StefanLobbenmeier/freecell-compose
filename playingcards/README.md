@@ -1,0 +1,1 @@
+Playing cards have been downloaded as SVG from https://github.com/MattCain/svg-playing-cards/tree/0c14ff6809f29a94f5f614592c93755a03b25d9e/imgs, conveted using https://github.com/ComposeGears/Valkyrie for use with jetpack compose. Copyright should is left with the original author Matt Cain
