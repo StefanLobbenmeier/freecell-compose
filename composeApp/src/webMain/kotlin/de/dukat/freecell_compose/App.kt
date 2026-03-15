@@ -2,6 +2,7 @@ package de.dukat.freecell_compose
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,7 +40,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontFamily
@@ -349,14 +352,23 @@ private fun PileSlot(
                 enabled = canStart,
                 onMove = onMove,
             ) {
-                CardFace(
-                    card = card,
-                    width = cardW,
-                    height = cardH,
-                    modifier = Modifier
-                        .alpha(if (ghost) 0.25f else 1f)
-                        .then(if (canStart) Modifier else Modifier.alpha(0.72f))
-                )
+                Box {
+                    CardFace(
+                        card = card,
+                        width = cardW,
+                        height = cardH,
+                        modifier = Modifier
+                            .alpha(if (ghost) 0.25f else 1f)
+                    )
+                    if (!canStart && !ghost) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0x44000000))
+                        )
+                    }
+                }
             }
         }
     }
@@ -426,14 +438,23 @@ private fun TableauColumn(
                             enabled = canStart,
                             onMove = onMove,
                         ) {
-                            CardFace(
-                                card = card,
-                                width = cardW,
-                                height = cardH,
-                                modifier = Modifier
-                                    .alpha(if (ghost) 0.25f else 1f)
-                                    .then(if (darken) Modifier.alpha(0.72f) else Modifier)
-                            )
+                            Box {
+                                CardFace(
+                                    card = card,
+                                    width = cardW,
+                                    height = cardH,
+                                    modifier = Modifier
+                                        .alpha(if (ghost) 0.25f else 1f)
+                                )
+                                if (darken && !ghost) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color(0x44000000))
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -529,17 +550,20 @@ private fun CardFace(
 ) {
     val vector = card.toPlayingCardVector()
 
-    // SVG source used a 167.09 x 242.67 viewport and placed the rank at ~ (8.31, 27.55)
-    // with font-size 32px. Scale those values to the current Dp size.
+    // SVG source used a 167.09 x 242.67 viewport.
+    // Reference SVG (7_of_spades.svg) places the top-left rank at x=8.5467014, y=28.013288 with font-size 32px.
     val viewportW = 167.09f
     val viewportH = 242.67f
-    val rankX = 8.3105459f
-    val rankBaselineY = 27.548409f
+    val rankX = 8.5467014f
+    val rankBaselineY = 28.013288f
     val rankFontSizePx = 32f
 
-    val rankFontSize = (height.value * (rankFontSizePx / viewportH)).sp
+    // Compose Text uses sp, and SVG uses px; approximate by scaling off card height.
+    // Tuned to match the SVG rank size visually.
+    val rankFontSize = (height.value * (rankFontSizePx * 0.94f / viewportH)).sp
     val insetX = width * (rankX / viewportW)
-    val insetTop = (height * (rankBaselineY / viewportH)) - (height * ((rankFontSizePx * 0.78f) / viewportH))
+    // Compose offset is top-left; SVG y is baseline. Use an ascent factor tuned to match the SVG.
+    val insetTop = (height * (rankBaselineY / viewportH)) - (height * ((rankFontSizePx * 1.02f) / viewportH))
 
     val rankText = when (card.rank) {
         1 -> "A"
@@ -591,10 +615,10 @@ private fun PlayingCardVector(
     vector: ImageVector,
     modifier: Modifier = Modifier,
 ) {
-    Icon(
-        imageVector = vector,
+    Image(
+        painter = rememberVectorPainter(vector),
         contentDescription = null,
-        tint = Color.Unspecified,
+        contentScale = ContentScale.FillBounds,
         modifier = modifier,
     )
 }
