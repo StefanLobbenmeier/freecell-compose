@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +36,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -352,23 +352,13 @@ private fun PileSlot(
                 enabled = canStart,
                 onMove = onMove,
             ) {
-                Box {
-                    CardFace(
-                        card = card,
-                        width = cardW,
-                        height = cardH,
-                        modifier = Modifier
-                            .alpha(if (ghost) 0.25f else 1f)
-                    )
-                    if (!canStart && !ghost) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0x44000000))
-                        )
-                    }
-                }
+                CardFace(
+                    card = card,
+                    width = cardW,
+                    height = cardH,
+                    dim = !canStart && !ghost,
+                    modifier = Modifier.alpha(if (ghost) 0.25f else 1f)
+                )
             }
         }
     }
@@ -421,7 +411,6 @@ private fun TableauColumn(
                     val card = cards[i]
                     val start = CardRef(PileId.Tableau(col), i)
                     val canStart = analysis.movableStarts.contains(start)
-                    val darken = !canStart
                     val activeDrag = drag.value
                     val ghost = activeDrag?.start?.pile == PileId.Tableau(col) && i >= activeDrag.start.index
 
@@ -438,23 +427,13 @@ private fun TableauColumn(
                             enabled = canStart,
                             onMove = onMove,
                         ) {
-                            Box {
-                                CardFace(
-                                    card = card,
-                                    width = cardW,
-                                    height = cardH,
-                                    modifier = Modifier
-                                        .alpha(if (ghost) 0.25f else 1f)
-                                )
-                                if (darken && !ghost) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color(0x44000000))
-                                    )
-                                }
-                            }
+                            CardFace(
+                                card = card,
+                                width = cardW,
+                                height = cardH,
+                                dim = !canStart && !ghost,
+                                modifier = Modifier.alpha(if (ghost) 0.25f else 1f)
+                            )
                         }
                     }
                 }
@@ -546,6 +525,7 @@ private fun CardFace(
     card: Card,
     width: Dp,
     height: Dp,
+    dim: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val vector = card.toPlayingCardVector()
@@ -572,7 +552,20 @@ private fun CardFace(
         13 -> "K"
         else -> card.rank.toString()
     }
-    val rankColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
+    val dimScale = if (dim) 0.72f else 1f
+    val rankColorBase = if (card.isRed) Color(0xFFDF0000) else Color.Black
+    val rankColor = Color(
+        red = rankColorBase.red * dimScale,
+        green = rankColorBase.green * dimScale,
+        blue = rankColorBase.blue * dimScale,
+        alpha = 1f,
+    )
+
+    val dimFilter = if (dim) {
+        ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(dimScale, dimScale, dimScale, 1f) })
+    } else {
+        null
+    }
 
     Box(
         modifier = modifier
@@ -584,6 +577,7 @@ private fun CardFace(
     ) {
         PlayingCardVector(
             vector = vector,
+            colorFilter = dimFilter,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -613,12 +607,14 @@ private fun CardFace(
 @Composable
 private fun PlayingCardVector(
     vector: ImageVector,
+    colorFilter: ColorFilter? = null,
     modifier: Modifier = Modifier,
 ) {
     Image(
         painter = rememberVectorPainter(vector),
         contentDescription = null,
         contentScale = ContentScale.FillBounds,
+        colorFilter = colorFilter,
         modifier = modifier,
     )
 }
