@@ -84,10 +84,12 @@ fun App() {
         val cardRects = remember { CardRects() }
         var autoAnim by remember { mutableStateOf<AutoAnim?>(null) }
         var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
+        var autoSolveHold by remember { mutableStateOf(false) }
 
-        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value) {
+        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoSolveHold) {
             if (drag.value != null) return@LaunchedEffect
             if (autoAnim != null) return@LaunchedEffect
+            if (autoSolveHold) return@LaunchedEffect
 
             val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
 
@@ -197,11 +199,17 @@ fun App() {
                                 Spacer(Modifier.width(8.dp))
                         Button(onClick = {
                             val seed = seedText.toIntOrNull()
+                            autoSolveHold = false
+                            autoAnim = null
+                            drag.value = null
                             store.newGame(seed)
                         }) { Text("New") }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
+                                autoSolveHold = true
+                                autoAnim = null
+                                drag.value = null
                                 store.undo()
                             },
                             enabled = ui.canUndo,
@@ -240,11 +248,17 @@ fun App() {
                                 Spacer(Modifier.width(8.dp))
                 Button(onClick = {
                     val seed = seedText.toIntOrNull()
+                    autoSolveHold = false
+                    autoAnim = null
+                    drag.value = null
                     store.newGame(seed)
                 }) { Text("New") }
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = {
+                        autoSolveHold = true
+                        autoAnim = null
+                        drag.value = null
                         store.undo()
                     },
                     enabled = ui.canUndo,
@@ -265,7 +279,10 @@ fun App() {
                         )
                     }
 
-                fun tryMove(move: Move) = store.tryMove(move)
+                fun tryMove(move: Move) {
+                    autoSolveHold = false
+                    store.tryMove(move)
+                }
 
                     // Top row: freecells + foundations
                     Row(
