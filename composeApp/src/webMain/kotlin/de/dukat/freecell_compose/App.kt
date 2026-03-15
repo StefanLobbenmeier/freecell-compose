@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -238,14 +239,19 @@ fun App() {
                         .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
                         .alpha(alpha)
                 ) {
-                    Column {
+                    val stackH = if (d.cards.isEmpty()) cardH else (cardH + (stackGapY * (d.cards.size - 1)))
+                    Box(
+                        modifier = Modifier
+                            .width(cardW)
+                            .height(stackH)
+                    ) {
                         for ((i, card) in d.cards.withIndex()) {
                             CardFace(
                                 card = card,
                                 width = cardW,
                                 height = cardH,
                                 modifier = Modifier
-                                    .padding(top = if (i == 0) 0.dp else stackGapY)
+                                    .offset(y = stackGapY * i)
                             )
                         }
                     }
@@ -387,22 +393,18 @@ private fun TableauColumn(
                 pileRects.set(PileId.Tableau(col), rect)
             }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // Total height must account for every card's full height plus the gaps.
-                .height(
-                    if (cards.isEmpty()) {
-                        cardH
-                    } else {
-                        (cardH * cards.size) + (gapY * (cards.size - 1))
-                    }
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (cards.isEmpty()) {
-                EmptyTableauSlot(cardW, cardH, highlight, dim)
-            } else {
+        if (cards.isEmpty()) {
+            EmptyTableauSlot(cardW, cardH, highlight, dim)
+        } else {
+            // Classic FreeCell overlap: each next card is shifted down by gapY,
+            // so only the top portion of hidden cards remains visible.
+            val stackH = cardH + (gapY * (cards.size - 1))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(stackH),
+                contentAlignment = Alignment.TopCenter,
+            ) {
                 for (i in cards.indices) {
                     val card = cards[i]
                     val start = CardRef(PileId.Tableau(col), i)
@@ -411,7 +413,10 @@ private fun TableauColumn(
                     val activeDrag = drag.value
                     val ghost = activeDrag?.start?.pile == PileId.Tableau(col) && i >= activeDrag.start.index
 
-                    Box(modifier = Modifier.padding(top = if (i == 0) 0.dp else gapY)) {
+                    Box(
+                        modifier = Modifier
+                            .offset(y = gapY * i)
+                    ) {
                         DraggableCardStart(
                             start = start,
                             cards = cards.subList(i, cards.size),
@@ -523,31 +528,74 @@ private fun CardFace(
     modifier: Modifier = Modifier,
 ) {
     val vector = card.toPlayingCardVector()
-    PlayingCardVector(
-        vector = vector,
-        width = width,
-        height = height,
-        modifier = modifier,
-    )
-}
 
-@Composable
-private fun PlayingCardVector(
-    vector: ImageVector,
-    width: Dp,
-    height: Dp,
-    modifier: Modifier = Modifier,
-) {
-    Icon(
-        imageVector = vector,
-        contentDescription = null,
-        tint = Color.Unspecified,
+    // SVG source used a 167.09 x 242.67 viewport and placed the rank at ~ (8.31, 27.55)
+    // with font-size 32px. Scale those values to the current Dp size.
+    val viewportW = 167.09f
+    val viewportH = 242.67f
+    val rankX = 8.3105459f
+    val rankBaselineY = 27.548409f
+    val rankFontSizePx = 32f
+
+    val rankFontSize = (height.value * (rankFontSizePx / viewportH)).sp
+    val insetX = width * (rankX / viewportW)
+    val insetTop = (height * (rankBaselineY / viewportH)) - (height * ((rankFontSizePx * 0.78f) / viewportH))
+
+    val rankText = when (card.rank) {
+        1 -> "A"
+        11 -> "J"
+        12 -> "Q"
+        13 -> "K"
+        else -> card.rank.toString()
+    }
+    val rankColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
+
+    Box(
         modifier = modifier
             .width(width)
             .height(height)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.Transparent)
             .border(1.dp, Color(0x22000000), RoundedCornerShape(12.dp)),
+    ) {
+        PlayingCardVector(
+            vector = vector,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        Text(
+            text = rankText,
+            color = rankColor,
+            fontFamily = FontFamily.SansSerif,
+            fontSize = rankFontSize,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.offset(x = insetX, y = insetTop),
+        )
+
+        Text(
+            text = rankText,
+            color = rankColor,
+            fontFamily = FontFamily.SansSerif,
+            fontSize = rankFontSize,
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .offset(x = -insetX, y = -insetTop)
+                .graphicsLayer { rotationZ = 180f },
+        )
+    }
+}
+
+@Composable
+private fun PlayingCardVector(
+    vector: ImageVector,
+    modifier: Modifier = Modifier,
+) {
+    Icon(
+        imageVector = vector,
+        contentDescription = null,
+        tint = Color.Unspecified,
+        modifier = modifier,
     )
 }
 
