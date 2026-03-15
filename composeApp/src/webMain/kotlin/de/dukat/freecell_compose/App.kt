@@ -83,8 +83,9 @@ fun App() {
         val pileRects = remember { PileRects() }
         val cardRects = remember { CardRects() }
         var autoAnim by remember { mutableStateOf<AutoAnim?>(null) }
+        var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
 
-        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoAnim) {
+        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value) {
             if (drag.value != null) return@LaunchedEffect
             if (autoAnim != null) return@LaunchedEffect
 
@@ -116,9 +117,10 @@ fun App() {
                 progress = progress,
             )
             progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
-            autoAnim = null
             store.tryMove(move)
-            delay(60)
+            delay(30)
+            autoAnim = null
+            delay(40)
         }
 
         BoxWithConstraints(
@@ -155,6 +157,9 @@ fun App() {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(pagePadding)
+                    .onGloballyPositioned { coords ->
+                        boardOriginRoot = coords.positionInRoot()
+                    }
             ) {
                 Column(
                     modifier = Modifier
@@ -338,8 +343,8 @@ fun App() {
                 val a = autoAnim
                 if (a != null) {
                     val t = a.progress.value.coerceIn(0f, 1f)
-                    val from = a.fromRect.topLeft
-                    val to = a.toRect.topLeft
+                    val from = a.fromRect.topLeft - boardOriginRoot
+                    val to = a.toRect.topLeft - boardOriginRoot
                     val pos = Offset(
                         x = from.x + (to.x - from.x) * t,
                         y = from.y + (to.y - from.y) * t,
