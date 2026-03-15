@@ -20,7 +20,7 @@ data class UiState(
 class FreecellStore(initial: GameState = newModelGame()) {
     private val history = ArrayDeque<GameState>()
 
-    private val _uiState = MutableStateFlow(
+    val uiState : StateFlow<UiState> field =  MutableStateFlow(
         UiState(
             state = initial,
             analysis = analyze(initial),
@@ -28,28 +28,27 @@ class FreecellStore(initial: GameState = newModelGame()) {
             canUndo = false,
         )
     )
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
     fun newGame(seed: Int? = null) {
         history.clear()
         val s = newModelGame(seed)
-        _uiState.value = UiState(state = s, analysis = analyze(s), message = null, canUndo = false)
+        uiState.value = UiState(state = s, analysis = analyze(s), message = null, canUndo = false)
     }
 
     fun undo() {
         val prev = history.removeLastOrNull() ?: return
-        _uiState.value = UiState(state = prev, analysis = analyze(prev), message = null, canUndo = history.isNotEmpty())
+        uiState.value = UiState(state = prev, analysis = analyze(prev), message = null, canUndo = history.isNotEmpty())
     }
 
     fun tryMove(move: Move) {
-        val cur = _uiState.value.state
+        val cur = uiState.value.state
         val r = applyMove(cur, move)
         val next = r.getOrNull()
         if (next != null) {
             history.addLast(cur)
-            _uiState.value = UiState(state = next, analysis = analyze(next), message = null, canUndo = true)
+            uiState.value = UiState(state = next, analysis = analyze(next), message = null, canUndo = true)
         } else {
-            _uiState.value = _uiState.value.copy(message = r.exceptionOrNull()?.message ?: "Illegal move")
+            uiState.value = uiState.value.copy(message = r.exceptionOrNull()?.message ?: "Illegal move")
         }
     }
 }
