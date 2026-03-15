@@ -63,7 +63,7 @@ fun analyze(state: GameState): Analysis {
                 if (toCol == fromCol) continue
                 val dest = state.tableau[toCol]
                 if (!canPlaceOnTableau(bottom, dest.lastOrNull())) continue
-                if (count > 1 && !capacityAllows(state, fromCol, startIndex, toCol, count)) continue
+                if (count > 1 && !capacityAllows(state, toCol, count)) continue
                 addMove(
                     startRef,
                     Move(
@@ -157,7 +157,7 @@ fun applyMove(state: GameState, move: Move): Result<GameState> {
             if (moving.size > 1) {
                 val fromCol = (move.from as? PileId.Tableau)?.index
                     ?: return Result.failure(IllegalArgumentException(MoveError.InvalidSource.name))
-                if (!capacityAllows(state, fromCol, move.fromIndex, to.index, moving.size)) {
+                if (!capacityAllows(state, to.index, moving.size)) {
                     return Result.failure(IllegalArgumentException(MoveError.MoveTooLargeForCapacity.name))
                 }
             }
@@ -280,8 +280,6 @@ private fun isValidTableauRun(cards: List<Card>): Boolean {
 
 private fun capacityAllows(
     state: GameState,
-    fromCol: Int,
-    fromIndex: Int,
     toCol: Int,
     movingCount: Int,
 ): Boolean {
@@ -290,19 +288,6 @@ private fun capacityAllows(
 
     val destIsEmptyNow = state.tableau[toCol].isEmpty()
     var emptyColumnsExcludingDest = emptyTableauNow - (if (destIsEmptyNow) 1 else 0)
-
-    // If the source becomes empty after lifting, you can use it as an extra empty column.
-    val sourceBecomesEmpty = run {
-        val col = state.tableau[fromCol]
-        if (col.isEmpty()) false
-        else {
-            fromIndex == 0 && movingCount == col.size
-        }
-    }
-    if (sourceBecomesEmpty && fromCol != toCol) {
-        // If source was non-empty, it wasn't counted as empty yet.
-        emptyColumnsExcludingDest += 1
-    }
 
     emptyColumnsExcludingDest = max(0, emptyColumnsExcludingDest)
     val maxMovable = (emptyFree + 1) * (1 shl emptyColumnsExcludingDest)
