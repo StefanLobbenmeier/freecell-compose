@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build (Wasm)
+        run: ./gradlew :composeApp:wasmJsBrowserDistribution --console=plain
+
+      - name: Prepare Pages artifact
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        run: |
+          touch composeApp/build/dist/wasmJs/productionExecutable/.nojekyll
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: composeApp/build/dist/wasmJs/productionExecutable
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        uses: actions/deploy-pages@v4
