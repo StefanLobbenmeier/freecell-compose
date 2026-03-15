@@ -12,6 +12,8 @@ kotlin {
         freeCompilerArgs.add("-Xexplicit-backing-fields")
     }
 
+    jvm("desktop")
+
     js {
         browser()
         binaries.executable()
@@ -40,6 +42,23 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+            }
+        }
     }
 }
 
+compose.desktop {
+    application {
+        mainClass = "de.dukat.freecell_compose.DesktopMainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = "FreeCell"
+            packageVersion = "1.0.0"
+        }
+    }
+}

@@ -10,6 +10,8 @@ group = "de.dukat"
 version = "unspecified"
 
 kotlin {
+    jvm("desktop")
+
     js {
         browser()
     }
