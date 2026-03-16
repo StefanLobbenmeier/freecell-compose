@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`4OfHearts`: ImageVector
+val PlayingCards.`4OfHearts`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._4OfHearts != null) {
-            return _root_ide_package_.com.dukat.playingcards._4OfHearts!!
+        if (_4OfHearts != null) {
+            return _4OfHearts!!
         }
-        _root_ide_package_.com.dukat.playingcards._4OfHearts = ImageVector.Builder(
+        _4OfHearts = ImageVector.Builder(
             name = "4OfHearts",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -35,6 +35,24 @@ val com.dukat.playingcards.PlayingCards.`4OfHearts`: ImageVector
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(19.12f, 28.01f)
+                verticalLineToRelative(-5.48f)
+                horizontalLineToRelative(-9.94f)
+                lineTo(9.18f, 19.95f)
+                lineTo(19.63f, 5.11f)
+                horizontalLineToRelative(2.3f)
+                lineTo(21.93f, 19.95f)
+                horizontalLineToRelative(3.09f)
+                verticalLineToRelative(2.58f)
+                horizontalLineToRelative(-3.09f)
+                verticalLineToRelative(5.48f)
+                close()
+                moveTo(19.12f, 19.95f)
+                lineTo(19.12f, 9.62f)
+                lineTo(11.95f, 19.95f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
                 moveTo(23.33f, 32.28f)
                 curveTo(17.9f, 32.28f, 17.18f, 37.73f, 17.18f, 37.73f)
                 curveTo(17.18f, 37.73f, 16.45f, 32.28f, 11.02f, 32.28f)
@@ -42,6 +60,24 @@ val com.dukat.playingcards.PlayingCards.`4OfHearts`: ImageVector
                 curveTo(3.78f, 45.42f, 14.8f, 51.55f, 17.18f, 60.49f)
                 curveTo(19.44f, 51.55f, 30.57f, 45.42f, 30.57f, 39.33f)
                 curveTo(30.57f, 34.73f, 27.13f, 32.28f, 23.33f, 32.28f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(148.47f, 213.52f)
+                lineToRelative(-0f, 5.48f)
+                lineToRelative(9.94f, -0f)
+                lineToRelative(-0f, 2.58f)
+                lineToRelative(-10.45f, 14.84f)
+                lineToRelative(-2.3f, -0f)
+                lineToRelative(-0f, -14.84f)
+                lineToRelative(-3.09f, -0f)
+                lineToRelative(-0f, -2.58f)
+                lineToRelative(3.09f, -0f)
+                lineToRelative(-0f, -5.48f)
+                close()
+                moveTo(148.47f, 221.58f)
+                lineToRelative(-0f, 10.33f)
+                lineToRelative(7.17f, -10.33f)
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
@@ -96,7 +132,7 @@ val com.dukat.playingcards.PlayingCards.`4OfHearts`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._4OfHearts!!
+        return _4OfHearts!!
     }
 
 @Suppress("ObjectPropertyName")

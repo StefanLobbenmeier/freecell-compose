@@ -1,17 +1,19 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.AceOfClubs: ImageVector
+val PlayingCards.AceOfClubs: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._AceOfClubs != null) {
-            return _root_ide_package_.com.dukat.playingcards._AceOfClubs!!
+        if (_AceOfClubs != null) {
+            return _AceOfClubs!!
         }
-        _root_ide_package_.com.dukat.playingcards._AceOfClubs = ImageVector.Builder(
+        _AceOfClubs = ImageVector.Builder(
             name = "AceOfClubs",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -35,6 +37,32 @@ val com.dukat.playingcards.PlayingCards.AceOfClubs: ImageVector
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
+                moveTo(6.66f, 27.55f)
+                lineTo(15.46f, 4.64f)
+                horizontalLineToRelative(3.27f)
+                lineToRelative(9.38f, 22.91f)
+                horizontalLineToRelative(-3.45f)
+                lineToRelative(-2.67f, -6.94f)
+                horizontalLineToRelative(-9.58f)
+                lineToRelative(-2.52f, 6.94f)
+                close()
+                moveTo(13.27f, 18.14f)
+                horizontalLineToRelative(7.77f)
+                lineToRelative(-2.39f, -6.34f)
+                quadToRelative(-1.09f, -2.89f, -1.63f, -4.75f)
+                quadToRelative(-0.44f, 2.2f, -1.23f, 4.38f)
+                close()
+            }
+            path(
+                fill = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0f to Color.Black,
+                        1f to Color.Black.copy(alpha = 0.654902f)
+                    ),
+                    center = Offset(84.26f, 86.21f),
+                    radius = 88.54f
+                )
+            ) {
                 moveToRelative(96.57f, 113.44f)
                 curveToRelative(0f, 0f, 14.18f, -11.35f, 14.18f, -27.08f)
                 curveToRelative(0f, -9.21f, -8.18f, -24.5f, -27.08f, -24.5f)
@@ -49,6 +77,77 @@ val com.dukat.playingcards.PlayingCards.AceOfClubs: ImageVector
                 curveToRelative(0f, 0f, 8.18f, 20.63f, 27.08f, 20.63f)
                 curveToRelative(15.76f, 0f, 25.79f, -13.51f, 25.79f, -25.79f)
                 curveToRelative(0f, -24.53f, -28.09f, -32.91f, -43.84f, -20.63f)
+                close()
+            }
+            path(
+                fill = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0f to Color.White.copy(alpha = 0.53333336f)
+                    ),
+                    center = Offset(39.11f, 118.03f),
+                    radius = 25.59f
+                )
+            ) {
+                moveToRelative(27.99f, 143.93f)
+                curveToRelative(0f, 0f, -1.84f, -23.63f, 5.23f, -30.57f)
+                curveToRelative(7.95f, -7.81f, 32.01f, -2.84f, 32.01f, -2.84f)
+                curveToRelative(0f, 0f, -16.36f, 6.18f, -22.86f, 12.09f)
+                curveToRelative(-6.22f, 5.65f, -14.37f, 21.33f, -14.37f, 21.33f)
+                close()
+            }
+            path(
+                fill = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0f to Color.White.copy(alpha = 0.5176471f)
+                    ),
+                    center = Offset(70.98f, 72.48f),
+                    radius = 25.59f
+                )
+            ) {
+                moveToRelative(59.86f, 98.39f)
+                curveToRelative(0f, 0f, -1.84f, -23.63f, 5.23f, -30.57f)
+                curveToRelative(7.95f, -7.81f, 32.01f, -2.84f, 32.01f, -2.84f)
+                curveToRelative(0f, 0f, -16.36f, 6.18f, -22.86f, 12.09f)
+                curveToRelative(-6.22f, 5.65f, -14.37f, 21.33f, -14.37f, 21.33f)
+                close()
+            }
+            path(
+                fill = Brush.radialGradient(
+                    colorStops = arrayOf(
+                        0f to Color.White.copy(alpha = 0.7019608f)
+                    ),
+                    center = Offset(116.65f, 106.23f),
+                    radius = 31.87f
+                )
+            ) {
+                moveToRelative(81.97f, 141.01f)
+                curveToRelative(0f, 0f, 14.58f, -27.94f, 26.7f, -31.33f)
+                curveToRelative(13.63f, -3.81f, 34.94f, 17.06f, 34.94f, 17.06f)
+                curveToRelative(0f, 0f, -21.15f, -3.36f, -31.97f, -0.79f)
+                curveToRelative(-10.34f, 2.46f, -29.67f, 15.06f, -29.67f, 15.06f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFFFFEFF))) {
+                moveToRelative(14.72f, 41.67f)
+                lineToRelative(0f, 151.37f)
+                lineToRelative(137.53f, 0f)
+                lineToRelative(0f, -151.37f)
+                lineToRelative(-137.53f, 0f)
+                close()
+                moveTo(83.63f, 61.79f)
+                curveToRelative(18.9f, 0f, 27.08f, 15.29f, 27.08f, 24.5f)
+                curveToRelative(0f, 15.73f, -14.19f, 27.08f, -14.19f, 27.08f)
+                curveToRelative(15.75f, -12.27f, 43.84f, -3.89f, 43.84f, 20.63f)
+                curveToRelative(0f, 12.27f, -10.03f, 25.79f, -25.79f, 25.79f)
+                curveToRelative(-18.9f, 0f, -27.08f, -20.63f, -27.08f, -20.63f)
+                curveToRelative(0f, 0f, -2.4f, 23.52f, 11.6f, 36.11f)
+                lineToRelative(-30.95f, 0f)
+                curveToRelative(14f, -12.59f, 11.61f, -36.11f, 11.61f, -36.11f)
+                curveToRelative(0f, 0f, -8.17f, 20.63f, -27.08f, 20.63f)
+                curveToRelative(-15.75f, 0f, -25.79f, -13.51f, -25.79f, -25.79f)
+                curveToRelative(0f, -24.53f, 28.08f, -32.91f, 43.84f, -20.63f)
+                curveToRelative(0f, 0f, -14.19f, -11.35f, -14.19f, -27.08f)
+                curveToRelative(0f, -9.2f, 8.17f, -24.5f, 27.08f, -24.5f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -66,6 +165,23 @@ val com.dukat.playingcards.PlayingCards.AceOfClubs: ImageVector
                 curveToRelative(0f, 0f, 2.03f, 5.13f, 6.74f, 5.13f)
                 curveToRelative(3.92f, 0f, 6.42f, -3.36f, 6.42f, -6.42f)
                 curveToRelative(0f, -6.1f, -6.99f, -8.19f, -10.91f, -5.13f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(160.51f, 214.47f)
+                lineToRelative(-8.8f, 22.91f)
+                lineToRelative(-3.27f, -0f)
+                lineToRelative(-9.38f, -22.91f)
+                lineToRelative(3.45f, -0f)
+                lineToRelative(2.67f, 6.94f)
+                lineToRelative(9.58f, -0f)
+                lineToRelative(2.52f, -6.94f)
+                close()
+                moveTo(153.9f, 223.87f)
+                lineToRelative(-7.77f, -0f)
+                lineToRelative(2.39f, 6.34f)
+                quadToRelative(1.09f, 2.89f, 1.63f, 4.75f)
+                quadToRelative(0.44f, -2.2f, 1.23f, -4.38f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -87,7 +203,7 @@ val com.dukat.playingcards.PlayingCards.AceOfClubs: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._AceOfClubs!!
+        return _AceOfClubs!!
     }
 
 @Suppress("ObjectPropertyName")

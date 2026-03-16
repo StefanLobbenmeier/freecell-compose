@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`10OfDiamonds`: ImageVector
+val PlayingCards.`10OfDiamonds`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._10OfDiamonds != null) {
-            return _root_ide_package_.com.dukat.playingcards._10OfDiamonds!!
+        if (_10OfDiamonds != null) {
+            return _10OfDiamonds!!
         }
-        _root_ide_package_.com.dukat.playingcards._10OfDiamonds = ImageVector.Builder(
+        _10OfDiamonds = ImageVector.Builder(
             name = "10OfDiamonds",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,18 @@ val com.dukat.playingcards.PlayingCards.`10OfDiamonds`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveTo(12.33f, 26.41f)
+                horizontalLineTo(9.52f)
+                verticalLineTo(8.49f)
+                quadToRelative(-1.02f, 0.97f, -2.67f, 1.94f)
+                quadToRelative(-1.64f, 0.97f, -2.95f, 1.45f)
+                verticalLineTo(9.16f)
+                quadToRelative(2.36f, -1.11f, 4.13f, -2.69f)
+                quadToRelative(1.77f, -1.58f, 2.5f, -3.06f)
+                horizontalLineToRelative(1.81f)
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
@@ -178,9 +190,73 @@ val com.dukat.playingcards.PlayingCards.`10OfDiamonds`: ImageVector
                 curveTo(103.71f, 180.84f, 96.88f, 176.02f, 91.4f, 168.61f)
                 close()
             }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(14.54f, 15.08f)
+                quadToRelative(0f, -4.06f, 0.83f, -6.53f)
+                quadToRelative(0.84f, -2.48f, 2.48f, -3.83f)
+                quadToRelative(1.66f, -1.34f, 4.16f, -1.34f)
+                quadToRelative(1.84f, 0f, 3.23f, 0.75f)
+                quadToRelative(1.39f, 0.73f, 2.3f, 2.14f)
+                quadToRelative(0.91f, 1.39f, 1.42f, 3.41f)
+                quadToRelative(0.52f, 2f, 0.52f, 5.41f)
+                quadToRelative(0f, 4.03f, -0.83f, 6.52f)
+                quadToRelative(-0.83f, 2.47f, -2.48f, 3.83f)
+                quadToRelative(-1.64f, 1.34f, -4.16f, 1.34f)
+                quadToRelative(-3.31f, 0f, -5.2f, -2.38f)
+                quadToRelative(-2.27f, -2.86f, -2.27f, -9.31f)
+                close()
+                moveTo(17.44f, 15.08f)
+                quadToRelative(0f, 5.64f, 1.31f, 7.52f)
+                quadToRelative(1.33f, 1.86f, 3.27f, 1.86f)
+                quadToRelative(1.94f, 0f, 3.25f, -1.88f)
+                quadToRelative(1.33f, -1.88f, 1.33f, -7.5f)
+                quadToRelative(0f, -5.66f, -1.33f, -7.52f)
+                quadToRelative(-1.31f, -1.86f, -3.28f, -1.86f)
+                quadToRelative(-1.94f, 0f, -3.09f, 1.64f)
+                quadToRelative(-1.45f, 2.09f, -1.45f, 7.73f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(154.51f, 215.98f)
+                lineToRelative(2.81f, -0f)
+                lineToRelative(-0f, 17.92f)
+                quadToRelative(1.02f, -0.97f, 2.67f, -1.94f)
+                quadToRelative(1.64f, -0.97f, 2.95f, -1.45f)
+                lineToRelative(-0f, 2.72f)
+                quadToRelative(-2.36f, 1.11f, -4.13f, 2.69f)
+                quadToRelative(-1.77f, 1.58f, -2.5f, 3.06f)
+                lineToRelative(-1.81f, -0f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(152.3f, 227.32f)
+                quadToRelative(-0f, 4.06f, -0.83f, 6.53f)
+                quadToRelative(-0.84f, 2.48f, -2.48f, 3.83f)
+                quadToRelative(-1.66f, 1.34f, -4.16f, 1.34f)
+                quadToRelative(-1.84f, -0f, -3.23f, -0.75f)
+                quadToRelative(-1.39f, -0.73f, -2.3f, -2.14f)
+                quadToRelative(-0.91f, -1.39f, -1.42f, -3.41f)
+                quadToRelative(-0.52f, -2f, -0.52f, -5.41f)
+                quadToRelative(-0f, -4.03f, 0.83f, -6.52f)
+                quadToRelative(0.83f, -2.47f, 2.48f, -3.83f)
+                quadToRelative(1.64f, -1.34f, 4.16f, -1.34f)
+                quadToRelative(3.31f, -0f, 5.2f, 2.38f)
+                quadToRelative(2.27f, 2.86f, 2.27f, 9.31f)
+                close()
+                moveTo(149.41f, 227.32f)
+                quadToRelative(-0f, -5.64f, -1.31f, -7.52f)
+                quadToRelative(-1.33f, -1.86f, -3.27f, -1.86f)
+                quadToRelative(-1.94f, -0f, -3.25f, 1.88f)
+                quadToRelative(-1.33f, 1.88f, -1.33f, 7.5f)
+                quadToRelative(-0f, 5.66f, 1.33f, 7.52f)
+                quadToRelative(1.31f, 1.86f, 3.28f, 1.86f)
+                quadToRelative(1.94f, -0f, 3.09f, -1.64f)
+                quadToRelative(1.45f, -2.09f, 1.45f, -7.73f)
+                close()
+            }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._10OfDiamonds!!
+        return _10OfDiamonds!!
     }
 
 @Suppress("ObjectPropertyName")

@@ -1,3 +1,3 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 object PlayingCards

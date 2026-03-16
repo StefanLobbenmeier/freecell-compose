@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`4OfSpades`: ImageVector
+val PlayingCards.`4OfSpades`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._4OfSpades != null) {
-            return _root_ide_package_.com.dukat.playingcards._4OfSpades!!
+        if (_4OfSpades != null) {
+            return _4OfSpades!!
         }
-        _root_ide_package_.com.dukat.playingcards._4OfSpades = ImageVector.Builder(
+        _4OfSpades = ImageVector.Builder(
             name = "4OfSpades",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,24 @@ val com.dukat.playingcards.PlayingCards.`4OfSpades`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(18.89f, 28.01f)
+                lineTo(18.89f, 22.53f)
+                lineTo(8.95f, 22.53f)
+                lineTo(8.95f, 19.95f)
+                lineTo(19.41f, 5.11f)
+                horizontalLineToRelative(2.3f)
+                lineTo(21.7f, 19.95f)
+                horizontalLineToRelative(3.09f)
+                verticalLineToRelative(2.58f)
+                horizontalLineToRelative(-3.09f)
+                verticalLineToRelative(5.48f)
+                close()
+                moveTo(18.89f, 19.95f)
+                lineTo(18.89f, 9.62f)
+                lineTo(11.72f, 19.95f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -58,6 +76,24 @@ val com.dukat.playingcards.PlayingCards.`4OfSpades`: ImageVector
                 curveTo(60.78f, 82.8f, 55.9f, 68.35f, 56.54f, 66.61f)
                 curveTo(57.75f, 67.82f, 61.3f, 74.5f, 66.8f, 74.71f)
                 curveTo(71.28f, 74.7f, 76.22f, 71.83f, 75.77f, 64.88f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(148.63f, 215.12f)
+                lineToRelative(-0f, 5.48f)
+                lineToRelative(9.94f, -0f)
+                lineToRelative(-0f, 2.58f)
+                lineToRelative(-10.45f, 14.84f)
+                lineToRelative(-2.3f, -0f)
+                lineToRelative(-0f, -14.84f)
+                lineToRelative(-3.09f, -0f)
+                lineToRelative(-0f, -2.58f)
+                lineToRelative(3.09f, -0f)
+                lineToRelative(-0f, -5.48f)
+                close()
+                moveTo(148.63f, 223.19f)
+                lineToRelative(-0f, 10.33f)
+                lineToRelative(7.17f, -10.33f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -114,7 +150,7 @@ val com.dukat.playingcards.PlayingCards.`4OfSpades`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._4OfSpades!!
+        return _4OfSpades!!
     }
 
 @Suppress("ObjectPropertyName")

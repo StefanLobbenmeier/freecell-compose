@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`7OfHearts`: ImageVector
+val PlayingCards.`7OfHearts`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._7OfHearts != null) {
-            return _root_ide_package_.com.dukat.playingcards._7OfHearts!!
+        if (_7OfHearts != null) {
+            return _7OfHearts!!
         }
-        _root_ide_package_.com.dukat.playingcards._7OfHearts = ImageVector.Builder(
+        _7OfHearts = ImageVector.Builder(
             name = "7OfHearts",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -35,6 +35,20 @@ val com.dukat.playingcards.PlayingCards.`7OfHearts`: ImageVector
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(10.29f, 8.11f)
+                verticalLineToRelative(-2.7f)
+                horizontalLineToRelative(14.83f)
+                verticalLineToRelative(2.19f)
+                quadToRelative(-2.19f, 2.33f, -4.34f, 6.19f)
+                quadToRelative(-2.14f, 3.86f, -3.31f, 7.94f)
+                quadToRelative(-0.84f, 2.88f, -1.08f, 6.3f)
+                horizontalLineToRelative(-2.89f)
+                quadToRelative(0.05f, -2.7f, 1.06f, -6.53f)
+                quadToRelative(1.02f, -3.83f, 2.91f, -7.38f)
+                quadToRelative(1.91f, -3.56f, 4.05f, -6f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
                 moveTo(23.33f, 32.28f)
                 curveTo(17.9f, 32.28f, 17.18f, 37.73f, 17.18f, 37.73f)
                 curveTo(17.18f, 37.73f, 16.45f, 32.28f, 11.02f, 32.28f)
@@ -42,6 +56,20 @@ val com.dukat.playingcards.PlayingCards.`7OfHearts`: ImageVector
                 curveTo(3.78f, 45.42f, 14.8f, 51.55f, 17.18f, 60.49f)
                 curveTo(19.44f, 51.55f, 30.57f, 45.42f, 30.57f, 39.33f)
                 curveTo(30.57f, 34.73f, 27.13f, 32.28f, 23.33f, 32.28f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(157.3f, 233.42f)
+                lineToRelative(-0f, 2.7f)
+                lineToRelative(-14.83f, -0f)
+                lineToRelative(-0f, -2.19f)
+                quadToRelative(2.19f, -2.33f, 4.34f, -6.19f)
+                quadToRelative(2.14f, -3.86f, 3.31f, -7.94f)
+                quadToRelative(0.84f, -2.88f, 1.08f, -6.3f)
+                lineToRelative(2.89f, -0f)
+                quadToRelative(-0.05f, 2.7f, -1.06f, 6.53f)
+                quadToRelative(-1.02f, 3.83f, -2.91f, 7.38f)
+                quadToRelative(-1.91f, 3.56f, -4.05f, 6f)
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
@@ -126,7 +154,7 @@ val com.dukat.playingcards.PlayingCards.`7OfHearts`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._7OfHearts!!
+        return _7OfHearts!!
     }
 
 @Suppress("ObjectPropertyName")

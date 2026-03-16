@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`2OfDiamonds`: ImageVector
+val PlayingCards.`2OfDiamonds`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._2OfDiamonds != null) {
-            return _root_ide_package_.com.dukat.playingcards._2OfDiamonds!!
+        if (_2OfDiamonds != null) {
+            return _2OfDiamonds!!
         }
-        _root_ide_package_.com.dukat.playingcards._2OfDiamonds = ImageVector.Builder(
+        _2OfDiamonds = ImageVector.Builder(
             name = "2OfDiamonds",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,56 @@ val com.dukat.playingcards.PlayingCards.`2OfDiamonds`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(23.96f, 23.71f)
+                verticalLineToRelative(2.7f)
+                horizontalLineTo(8.81f)
+                quadToRelative(-0.03f, -1.02f, 0.33f, -1.95f)
+                quadToRelative(0.58f, -1.55f, 1.84f, -3.05f)
+                quadToRelative(1.28f, -1.5f, 3.69f, -3.47f)
+                quadToRelative(3.73f, -3.06f, 5.05f, -4.84f)
+                quadToRelative(1.31f, -1.8f, 1.31f, -3.39f)
+                quadToRelative(0f, -1.67f, -1.2f, -2.81f)
+                quadToRelative(-1.19f, -1.16f, -3.11f, -1.16f)
+                quadToRelative(-2.03f, 0f, -3.25f, 1.22f)
+                quadToRelative(-1.22f, 1.22f, -1.23f, 3.38f)
+                lineTo(9.35f, 10.04f)
+                quadToRelative(0.3f, -3.23f, 2.23f, -4.92f)
+                quadToRelative(1.94f, -1.7f, 5.2f, -1.7f)
+                quadToRelative(3.3f, 0f, 5.22f, 1.83f)
+                quadToRelative(1.92f, 1.83f, 1.92f, 4.53f)
+                quadToRelative(0f, 1.37f, -0.56f, 2.7f)
+                quadToRelative(-0.56f, 1.33f, -1.88f, 2.8f)
+                quadToRelative(-1.3f, 1.47f, -4.33f, 4.03f)
+                quadToRelative(-2.53f, 2.13f, -3.25f, 2.89f)
+                quadToRelative(-0.72f, 0.75f, -1.19f, 1.52f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(143.38f, 219.42f)
+                lineToRelative(-0f, -2.7f)
+                lineToRelative(15.14f, -0f)
+                quadToRelative(0.03f, 1.02f, -0.33f, 1.95f)
+                quadToRelative(-0.58f, 1.55f, -1.84f, 3.05f)
+                quadToRelative(-1.28f, 1.5f, -3.69f, 3.47f)
+                quadToRelative(-3.73f, 3.06f, -5.05f, 4.84f)
+                quadToRelative(-1.31f, 1.8f, -1.31f, 3.39f)
+                quadToRelative(-0f, 1.67f, 1.2f, 2.81f)
+                quadToRelative(1.19f, 1.16f, 3.11f, 1.16f)
+                quadToRelative(2.03f, -0f, 3.25f, -1.22f)
+                quadToRelative(1.22f, -1.22f, 1.23f, -3.38f)
+                lineToRelative(2.89f, 0.3f)
+                quadToRelative(-0.3f, 3.23f, -2.23f, 4.92f)
+                quadToRelative(-1.94f, 1.7f, -5.2f, 1.7f)
+                quadToRelative(-3.3f, -0f, -5.22f, -1.83f)
+                quadToRelative(-1.92f, -1.83f, -1.92f, -4.53f)
+                quadToRelative(-0f, -1.38f, 0.56f, -2.7f)
+                quadToRelative(0.56f, -1.33f, 1.88f, -2.8f)
+                quadToRelative(1.3f, -1.47f, 4.33f, -4.03f)
+                quadToRelative(2.53f, -2.13f, 3.25f, -2.89f)
+                quadToRelative(0.72f, -0.75f, 1.19f, -1.52f)
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
@@ -84,7 +134,7 @@ val com.dukat.playingcards.PlayingCards.`2OfDiamonds`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._2OfDiamonds!!
+        return _2OfDiamonds!!
     }
 
 @Suppress("ObjectPropertyName")

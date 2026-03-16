@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`2OfSpades`: ImageVector
+val PlayingCards.`2OfSpades`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._2OfSpades != null) {
-            return _root_ide_package_.com.dukat.playingcards._2OfSpades!!
+        if (_2OfSpades != null) {
+            return _2OfSpades!!
         }
-        _root_ide_package_.com.dukat.playingcards._2OfSpades = ImageVector.Builder(
+        _2OfSpades = ImageVector.Builder(
             name = "2OfSpades",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,31 @@ val com.dukat.playingcards.PlayingCards.`2OfSpades`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(24.66f, 25.31f)
+                verticalLineToRelative(2.7f)
+                horizontalLineTo(9.52f)
+                quadToRelative(-0.03f, -1.02f, 0.33f, -1.95f)
+                quadToRelative(0.58f, -1.55f, 1.84f, -3.05f)
+                quadToRelative(1.28f, -1.5f, 3.69f, -3.47f)
+                quadToRelative(3.73f, -3.06f, 5.05f, -4.84f)
+                quadToRelative(1.31f, -1.8f, 1.31f, -3.39f)
+                quadToRelative(0f, -1.67f, -1.2f, -2.81f)
+                quadToRelative(-1.19f, -1.16f, -3.11f, -1.16f)
+                quadToRelative(-2.03f, 0f, -3.25f, 1.22f)
+                quadToRelative(-1.22f, 1.22f, -1.23f, 3.37f)
+                lineToRelative(-2.89f, -0.3f)
+                quadToRelative(0.3f, -3.23f, 2.23f, -4.92f)
+                quadToRelative(1.94f, -1.7f, 5.2f, -1.7f)
+                quadToRelative(3.3f, 0f, 5.22f, 1.83f)
+                quadToRelative(1.92f, 1.83f, 1.92f, 4.53f)
+                quadToRelative(0f, 1.38f, -0.56f, 2.7f)
+                quadToRelative(-0.56f, 1.33f, -1.88f, 2.8f)
+                quadToRelative(-1.3f, 1.47f, -4.33f, 4.03f)
+                quadToRelative(-2.53f, 2.13f, -3.25f, 2.89f)
+                quadToRelative(-0.72f, 0.75f, -1.19f, 1.52f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -58,6 +83,31 @@ val com.dukat.playingcards.PlayingCards.`2OfSpades`: ImageVector
                 curveTo(89.58f, 82.8f, 84.7f, 68.35f, 85.34f, 66.61f)
                 curveTo(86.55f, 67.82f, 90.1f, 74.5f, 95.6f, 74.71f)
                 curveTo(100.08f, 74.7f, 105.02f, 71.83f, 104.57f, 64.88f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(142.87f, 217.83f)
+                lineToRelative(-0f, -2.7f)
+                lineTo(158.01f, 215.12f)
+                quadToRelative(0.03f, 1.02f, -0.33f, 1.95f)
+                quadToRelative(-0.58f, 1.55f, -1.84f, 3.05f)
+                quadToRelative(-1.28f, 1.5f, -3.69f, 3.47f)
+                quadToRelative(-3.73f, 3.06f, -5.05f, 4.84f)
+                quadToRelative(-1.31f, 1.8f, -1.31f, 3.39f)
+                quadToRelative(-0f, 1.67f, 1.2f, 2.81f)
+                quadToRelative(1.19f, 1.16f, 3.11f, 1.16f)
+                quadToRelative(2.03f, -0f, 3.25f, -1.22f)
+                quadToRelative(1.22f, -1.22f, 1.23f, -3.38f)
+                lineToRelative(2.89f, 0.3f)
+                quadToRelative(-0.3f, 3.23f, -2.23f, 4.92f)
+                quadToRelative(-1.94f, 1.7f, -5.2f, 1.7f)
+                quadToRelative(-3.3f, -0f, -5.22f, -1.83f)
+                quadToRelative(-1.92f, -1.83f, -1.92f, -4.53f)
+                quadToRelative(-0f, -1.38f, 0.56f, -2.7f)
+                quadToRelative(0.56f, -1.33f, 1.88f, -2.8f)
+                quadToRelative(1.3f, -1.47f, 4.33f, -4.03f)
+                quadToRelative(2.53f, -2.13f, 3.25f, -2.89f)
+                quadToRelative(0.72f, -0.75f, 1.19f, -1.52f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -88,7 +138,7 @@ val com.dukat.playingcards.PlayingCards.`2OfSpades`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._2OfSpades!!
+        return _2OfSpades!!
     }
 
 @Suppress("ObjectPropertyName")

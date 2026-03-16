@@ -1,8 +1,8 @@
 package de.dukat.freecell_compose.ui
 
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.dukat.playingcards.*
-import com.dukat.playingcards.PlayingCards
+import de.dukat.playingcards.*
+import de.dukat.playingcards.PlayingCards
 import de.dukat.freecell_compose.freecell.model.Card
 import de.dukat.freecell_compose.freecell.model.Suit
 

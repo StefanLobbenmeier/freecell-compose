@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`4OfDiamonds`: ImageVector
+val PlayingCards.`4OfDiamonds`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._4OfDiamonds != null) {
-            return _root_ide_package_.com.dukat.playingcards._4OfDiamonds!!
+        if (_4OfDiamonds != null) {
+            return _4OfDiamonds!!
         }
-        _root_ide_package_.com.dukat.playingcards._4OfDiamonds = ImageVector.Builder(
+        _4OfDiamonds = ImageVector.Builder(
             name = "4OfDiamonds",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,42 @@ val com.dukat.playingcards.PlayingCards.`4OfDiamonds`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveTo(18.19f, 26.41f)
+                lineTo(18.19f, 20.93f)
+                lineTo(8.25f, 20.93f)
+                lineTo(8.25f, 18.35f)
+                lineTo(18.71f, 3.51f)
+                horizontalLineToRelative(2.3f)
+                lineTo(21f, 18.35f)
+                horizontalLineToRelative(3.09f)
+                verticalLineToRelative(2.58f)
+                horizontalLineToRelative(-3.09f)
+                verticalLineToRelative(5.48f)
+                close()
+                moveTo(18.19f, 18.35f)
+                lineTo(18.19f, 8.02f)
+                lineTo(11.02f, 18.35f)
+                close()
+            }
+            path(fill = SolidColor(Color(0xFFDF0000))) {
+                moveToRelative(149.14f, 216.72f)
+                lineToRelative(-0f, 5.48f)
+                lineToRelative(9.94f, -0f)
+                lineToRelative(-0f, 2.58f)
+                lineToRelative(-10.45f, 14.84f)
+                lineToRelative(-2.3f, -0f)
+                lineToRelative(-0f, -14.84f)
+                lineToRelative(-3.09f, -0f)
+                lineToRelative(-0f, -2.58f)
+                lineToRelative(3.09f, -0f)
+                lineToRelative(-0f, -5.48f)
+                close()
+                moveTo(149.14f, 224.78f)
+                lineToRelative(-0f, 10.33f)
+                lineToRelative(7.17f, -10.33f)
                 close()
             }
             path(fill = SolidColor(Color(0xFFDF0000))) {
@@ -108,7 +144,7 @@ val com.dukat.playingcards.PlayingCards.`4OfDiamonds`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._4OfDiamonds!!
+        return _4OfDiamonds!!
     }
 
 @Suppress("ObjectPropertyName")

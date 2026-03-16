@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`10OfSpades`: ImageVector
+val PlayingCards.`10OfSpades`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._10OfSpades != null) {
-            return _root_ide_package_.com.dukat.playingcards._10OfSpades!!
+        if (_10OfSpades != null) {
+            return _10OfSpades!!
         }
-        _root_ide_package_.com.dukat.playingcards._10OfSpades = ImageVector.Builder(
+        _10OfSpades = ImageVector.Builder(
             name = "10OfSpades",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -32,6 +32,18 @@ val com.dukat.playingcards.PlayingCards.`10OfSpades`: ImageVector
                 horizontalLineToRelative(152.85f)
                 curveToRelative(3.78f, 0f, 6.87f, 3.09f, 6.87f, 6.87f)
                 verticalLineToRelative(228.43f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(11.97f, 28.34f)
+                horizontalLineTo(9.15f)
+                verticalLineTo(10.42f)
+                quadToRelative(-1.02f, 0.97f, -2.67f, 1.94f)
+                quadToRelative(-1.64f, 0.97f, -2.95f, 1.45f)
+                verticalLineToRelative(-2.72f)
+                quadToRelative(2.36f, -1.11f, 4.13f, -2.69f)
+                quadToRelative(1.77f, -1.58f, 2.5f, -3.06f)
+                horizontalLineToRelative(1.81f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -190,9 +202,81 @@ val com.dukat.playingcards.PlayingCards.`10OfSpades`: ImageVector
                 curveTo(67.81f, 163.2f, 62.87f, 166.08f, 63.32f, 173.03f)
                 close()
             }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(30.44f, 17.03f)
+                quadToRelative(0f, 6.27f, -1.97f, 9.2f)
+                quadToRelative(-1.95f, 2.92f, -6.08f, 2.92f)
+                quadToRelative(-4.19f, 0f, -6.13f, -2.97f)
+                quadToRelative(-1.92f, -2.97f, -1.92f, -9.13f)
+                quadToRelative(0f, -6.2f, 1.95f, -9.16f)
+                quadToRelative(1.95f, -2.97f, 6.09f, -2.97f)
+                quadToRelative(4.19f, 0f, 6.11f, 3.02f)
+                quadToRelative(1.94f, 3f, 1.94f, 9.08f)
+                close()
+                moveTo(26.33f, 24.12f)
+                quadToRelative(0.55f, -1.27f, 0.73f, -2.97f)
+                quadToRelative(0.2f, -1.72f, 0.2f, -4.13f)
+                quadToRelative(0f, -2.38f, -0.2f, -4.13f)
+                quadToRelative(-0.19f, -1.75f, -0.75f, -2.97f)
+                quadToRelative(-0.55f, -1.2f, -1.5f, -1.81f)
+                quadToRelative(-0.94f, -0.61f, -2.42f, -0.61f)
+                quadToRelative(-1.47f, 0f, -2.44f, 0.61f)
+                quadToRelative(-0.95f, 0.61f, -1.52f, 1.84f)
+                quadToRelative(-0.53f, 1.16f, -0.73f, 3.02f)
+                quadToRelative(-0.19f, 1.86f, -0.19f, 4.08f)
+                quadToRelative(0f, 2.44f, 0.17f, 4.08f)
+                quadToRelative(0.17f, 1.64f, 0.73f, 2.94f)
+                quadToRelative(0.52f, 1.22f, 1.45f, 1.86f)
+                quadToRelative(0.95f, 0.64f, 2.52f, 0.64f)
+                quadToRelative(1.47f, 0f, 2.44f, -0.61f)
+                quadToRelative(0.97f, -0.61f, 1.5f, -1.84f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(154.91f, 214.58f)
+                lineToRelative(2.81f, -0f)
+                lineToRelative(-0f, 17.92f)
+                quadToRelative(1.02f, -0.97f, 2.67f, -1.94f)
+                quadToRelative(1.64f, -0.97f, 2.95f, -1.45f)
+                lineToRelative(-0f, 2.72f)
+                quadToRelative(-2.36f, 1.11f, -4.13f, 2.69f)
+                quadToRelative(-1.77f, 1.58f, -2.5f, 3.06f)
+                lineToRelative(-1.81f, -0f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(136.44f, 225.89f)
+                quadToRelative(-0f, -6.27f, 1.97f, -9.2f)
+                quadToRelative(1.95f, -2.92f, 6.08f, -2.92f)
+                quadToRelative(4.19f, -0f, 6.13f, 2.97f)
+                quadToRelative(1.92f, 2.97f, 1.92f, 9.13f)
+                quadToRelative(-0f, 6.2f, -1.95f, 9.16f)
+                quadToRelative(-1.95f, 2.97f, -6.09f, 2.97f)
+                quadToRelative(-4.19f, -0f, -6.11f, -3.02f)
+                quadToRelative(-1.94f, -3f, -1.94f, -9.08f)
+                close()
+                moveTo(140.55f, 218.8f)
+                quadToRelative(-0.55f, 1.27f, -0.73f, 2.97f)
+                quadToRelative(-0.2f, 1.72f, -0.2f, 4.13f)
+                quadToRelative(-0f, 2.38f, 0.2f, 4.13f)
+                quadToRelative(0.19f, 1.75f, 0.75f, 2.97f)
+                quadToRelative(0.55f, 1.2f, 1.5f, 1.81f)
+                quadToRelative(0.94f, 0.61f, 2.42f, 0.61f)
+                quadToRelative(1.47f, -0f, 2.44f, -0.61f)
+                quadToRelative(0.95f, -0.61f, 1.52f, -1.84f)
+                quadToRelative(0.53f, -1.16f, 0.73f, -3.02f)
+                quadToRelative(0.19f, -1.86f, 0.19f, -4.08f)
+                quadToRelative(-0f, -2.44f, -0.17f, -4.08f)
+                quadToRelative(-0.17f, -1.64f, -0.73f, -2.94f)
+                quadToRelative(-0.52f, -1.22f, -1.45f, -1.86f)
+                quadToRelative(-0.95f, -0.64f, -2.52f, -0.64f)
+                quadToRelative(-1.47f, -0f, -2.44f, 0.61f)
+                quadToRelative(-0.97f, 0.61f, -1.5f, 1.84f)
+                close()
+            }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._10OfSpades!!
+        return _10OfSpades!!
     }
 
 @Suppress("ObjectPropertyName")

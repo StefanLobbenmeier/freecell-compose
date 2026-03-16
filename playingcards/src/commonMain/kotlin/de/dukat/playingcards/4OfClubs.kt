@@ -1,4 +1,4 @@
-package com.dukat.playingcards
+package de.dukat.playingcards
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -6,12 +6,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
-val com.dukat.playingcards.PlayingCards.`4OfClubs`: ImageVector
+val PlayingCards.`4OfClubs`: ImageVector
     get() {
-        if (_root_ide_package_.com.dukat.playingcards._4OfClubs != null) {
-            return _root_ide_package_.com.dukat.playingcards._4OfClubs!!
+        if (_4OfClubs != null) {
+            return _4OfClubs!!
         }
-        _root_ide_package_.com.dukat.playingcards._4OfClubs = ImageVector.Builder(
+        _4OfClubs = ImageVector.Builder(
             name = "4OfClubs",
             defaultWidth = 167.09.dp,
             defaultHeight = 242.67.dp,
@@ -35,6 +35,24 @@ val com.dukat.playingcards.PlayingCards.`4OfClubs`: ImageVector
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
+                moveTo(18.65f, 27.55f)
+                lineTo(18.65f, 22.06f)
+                lineTo(8.72f, 22.06f)
+                lineTo(8.72f, 19.49f)
+                lineTo(19.17f, 4.64f)
+                horizontalLineToRelative(2.3f)
+                lineTo(21.47f, 19.49f)
+                horizontalLineToRelative(3.09f)
+                verticalLineToRelative(2.58f)
+                horizontalLineToRelative(-3.09f)
+                verticalLineToRelative(5.48f)
+                close()
+                moveTo(18.65f, 19.49f)
+                lineTo(18.65f, 9.16f)
+                lineTo(11.48f, 19.49f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
                 moveToRelative(20.69f, 43.74f)
                 curveToRelative(0f, 0f, 3.53f, -2.82f, 3.53f, -6.74f)
                 curveToRelative(0f, -2.29f, -2.03f, -6.09f, -6.74f, -6.09f)
@@ -49,6 +67,24 @@ val com.dukat.playingcards.PlayingCards.`4OfClubs`: ImageVector
                 curveToRelative(0f, 0f, 2.03f, 5.13f, 6.74f, 5.13f)
                 curveToRelative(3.92f, 0f, 6.42f, -3.36f, 6.42f, -6.42f)
                 curveToRelative(0f, -6.1f, -6.99f, -8.19f, -10.91f, -5.13f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                moveToRelative(148.52f, 214.47f)
+                lineToRelative(-0f, 5.48f)
+                lineToRelative(9.94f, -0f)
+                lineToRelative(-0f, 2.58f)
+                lineToRelative(-10.45f, 14.84f)
+                lineToRelative(-2.3f, -0f)
+                lineToRelative(-0f, -14.84f)
+                lineToRelative(-3.09f, -0f)
+                lineToRelative(-0f, -2.58f)
+                lineToRelative(3.09f, -0f)
+                lineToRelative(-0f, -5.48f)
+                close()
+                moveTo(148.52f, 222.53f)
+                lineToRelative(-0f, 10.33f)
+                lineToRelative(7.17f, -10.33f)
                 close()
             }
             path(fill = SolidColor(Color.Black)) {
@@ -138,7 +174,7 @@ val com.dukat.playingcards.PlayingCards.`4OfClubs`: ImageVector
             }
         }.build()
 
-        return _root_ide_package_.com.dukat.playingcards._4OfClubs!!
+        return _4OfClubs!!
     }
 
 @Suppress("ObjectPropertyName")
