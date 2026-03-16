@@ -56,6 +56,11 @@ function isNavigation(request) {
   return request.mode === 'navigate' || (request.destination === 'document');
 }
 
+function isCodeAsset(url) {
+  const p = url.pathname;
+  return p.endsWith('.js') || p.endsWith('.mjs') || p.endsWith('.wasm');
+}
+
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
@@ -64,16 +69,38 @@ self.addEventListener('fetch', (event) => {
     (async () => {
       const cache = await caches.open(CACHE_NAME);
 
+      const url = new URL(request.url);
+
       if (isNavigation(request)) {
+        // Always try to load a fresh HTML shell when online.
+        const indexUrl = new URL('index.html', self.registration.scope);
+        const indexRequest = new Request(indexUrl.toString(), { cache: 'no-cache' });
         try {
-          const response = await fetch(request);
+          const response = await fetch(indexRequest);
           cache.put('./', response.clone());
+          cache.put('./index.html', response.clone());
           return response;
         } catch (_) {
           return (
-            (await cache.match(request, { ignoreSearch: true })) ||
+            (await cache.match('./index.html', { ignoreSearch: true })) ||
+            (await cache.match('./', { ignoreSearch: true })) ||
             (await cache.match('./offline.html'))
           );
+        }
+      }
+
+      // JS/WASM files are content-addressed by filename in our bundles.
+      // Prefer cache to avoid unnecessary network requests.
+      if (isCodeAsset(url)) {
+        const cached = await cache.match(request, { ignoreSearch: true });
+        if (cached) return cached;
+
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) cache.put(request, response.clone());
+          return response;
+        } catch (_) {
+          return Response.error();
         }
       }
 
