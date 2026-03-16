@@ -4,7 +4,7 @@
  * - Updates in the background and prompts via page logic
  */
 
-const VERSION = 'v1';
+const VERSION = 'SET_DURING_CI';
 const CACHE_NAME = `freecell-${VERSION}`;
 
 const CORE_ASSETS = [

@@ -23,6 +23,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stamp service worker version
+        env:
+          SW_VERSION: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          sw_version = os.environ.get('SW_VERSION')
+          if not sw_version:
+              raise SystemExit('SW_VERSION not set')
+
+          sw_path = Path('composeApp/src/webMain/resources/sw.js')
+          text = sw_path.read_text(encoding='utf-8')
+
+          import re
+          new_text, n = re.subn(r"^const VERSION = '.*';$", f"const VERSION = '{sw_version}';", text, flags=re.M)
+          if n != 1:
+              raise SystemExit(f'Expected to replace 1 VERSION line, replaced {n}')
+
+          sw_path.write_text(new_text, encoding='utf-8')
+          print(f'Stamped {sw_path} VERSION={sw_version}')
+          PY
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
