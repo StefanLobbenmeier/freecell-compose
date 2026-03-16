@@ -30,5 +30,43 @@
     </circle>
 </svg>
 <script type="application/javascript" src="composeApp.js"></script>
+
+<script>
+    (function () {
+        if (!('serviceWorker' in navigator)) return;
+
+        var host = location.hostname;
+        var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+        if (isLocal) return;
+
+        function promptToRefresh(reg) {
+            if (!reg || !reg.waiting) return;
+            var ok = confirm('A new version of FreeCell is available. Reload now?');
+            if (ok) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+
+        navigator.serviceWorker.register('sw.js', { scope: './' }).then(function (reg) {
+            promptToRefresh(reg);
+
+            reg.addEventListener('updatefound', function () {
+                var sw = reg.installing;
+                if (!sw) return;
+                sw.addEventListener('statechange', function () {
+                    if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+                        promptToRefresh(reg);
+                    }
+                });
+            });
+
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible') reg.update();
+            });
+        });
+
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            location.reload();
+        });
+    })();
+</script>
 </body>
 </html>

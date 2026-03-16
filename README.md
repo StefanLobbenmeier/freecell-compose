@@ -33,6 +33,23 @@ in your IDE's toolbar or run it directly from the terminal:
       .\gradlew.bat :composeApp:jsBrowserDevelopmentRun
       ```
 
+### Offline (iPhone Home Screen / PWA)
+
+The web build includes a simple service worker (`sw.js`) that caches the app shell so it keeps working when added to the iPhone Home Screen and the device goes offline.
+
+- Install on iPhone: open the app in Safari -> Share -> Add to Home Screen.
+- First run must be online (so the service worker can cache the assets).
+- Updates: when the phone is online and a new release is deployed, the app will download it in the background and prompt to reload.
+
+To produce the distributable folder (includes `sw.js` and `offline.html`):
+
+```shell
+./gradlew :composeApp:wasmJsBrowserDistribution
+```
+
+Output folder:
+- `composeApp/build/dist/wasmJs/productionExecutable/`
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
