@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.Icon
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -749,37 +750,7 @@ private fun CardFace(
 ) {
     val vector = card.toPlayingCardVector()
 
-    // SVG source used a 167.09 x 242.67 viewport.
-    // Reference SVG (7_of_spades.svg) places the top-left rank at x=8.5467014, y=28.013288 with font-size 32px.
-    val viewportW = 167.09f
-    val viewportH = 242.67f
-    val rankX = 8.5467014f
-    val rankBaselineY = 28.013288f
-    val rankFontSizePx = 32f
-
-    // Compose Text uses sp, and SVG uses px; approximate by scaling off card height.
-    // Tuned to match the SVG rank size visually.
-    val rankFontSize = (height.value * (rankFontSizePx * 0.94f / viewportH)).sp
-    val insetX = width * (rankX / viewportW)
-    // Compose offset is top-left; SVG y is baseline. Use an ascent factor tuned to match the SVG.
-    val insetTop = (height * (rankBaselineY / viewportH)) - (height * ((rankFontSizePx * 1.02f) / viewportH))
-
-    val rankText = when (card.rank) {
-        1 -> "A"
-        11 -> "J"
-        12 -> "Q"
-        13 -> "K"
-        else -> card.rank.toString()
-    }
     val dimScale = if (dim) 0.72f else 1f
-    val rankColorBase = if (card.isRed) Color(0xFFDF0000) else Color.Black
-    val rankColor = Color(
-        red = rankColorBase.red * dimScale,
-        green = rankColorBase.green * dimScale,
-        blue = rankColorBase.blue * dimScale,
-        alpha = 1f,
-    )
-
     val dimFilter = if (dim) {
         ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(dimScale, dimScale, dimScale, 1f) })
     } else {
@@ -798,27 +769,6 @@ private fun CardFace(
             vector = vector,
             colorFilter = dimFilter,
             modifier = Modifier.fillMaxSize(),
-        )
-
-        Text(
-            text = rankText,
-            color = rankColor,
-            fontFamily = FontFamily.SansSerif,
-            fontSize = rankFontSize,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.offset(x = insetX, y = insetTop),
-        )
-
-        Text(
-            text = rankText,
-            color = rankColor,
-            fontFamily = FontFamily.SansSerif,
-            fontSize = rankFontSize,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .offset(x = -insetX, y = -insetTop)
-                .graphicsLayer { rotationZ = 180f },
         )
     }
 }
