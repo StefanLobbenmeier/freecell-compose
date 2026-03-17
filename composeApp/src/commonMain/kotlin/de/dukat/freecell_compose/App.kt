@@ -175,7 +175,9 @@ fun App() {
 
             val cardCorner = cardCorner(cardW, cardH)
             val headerHMobile = (cardH / 3f)
-            val headerMaxDesktop = 24.dp
+            // On desktop, keep the simplified header smaller than the overlap gap so the full
+            // header remains visible for covered cards.
+            val headerMaxDesktop = (stackGapY - 2.dp).coerceIn(12.dp, 20.dp)
 
             // Scale borders with the board scale so they don't eat into content on slim screens.
             val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
