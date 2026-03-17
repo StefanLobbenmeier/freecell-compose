@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import de.dukat.freecell_compose.ui.StackedHiddenCardFace
 import de.dukat.freecell_compose.ui.toPlayingCardVector
 import de.dukat.freecell_compose.freecell.model.Analysis
 import de.dukat.freecell_compose.freecell.model.Card
@@ -589,6 +590,7 @@ private fun TableauColumn(
     hiddenCard: CardRef? = null,
 ) {
     val cards = state.tableau[col]
+    val pileId = PileId.Tableau(col)
     val alpha = when {
         highlight -> 1f
         dim -> 0.35f
@@ -602,7 +604,7 @@ private fun TableauColumn(
             .onGloballyPositioned { coords ->
                 val pos = coords.positionInRoot()
                 val rect = Rect(pos, Size(coords.size.width.toFloat(), coords.size.height.toFloat()))
-                pileRects.set(PileId.Tableau(col), rect)
+                pileRects.set(pileId, rect)
             }
     ) {
         if (cards.isEmpty()) {
@@ -619,10 +621,18 @@ private fun TableauColumn(
             ) {
                 for (i in cards.indices) {
                     val card = cards[i]
-                    val start = CardRef(PileId.Tableau(col), i)
+                    val start = CardRef(pileId, i)
                     val canStart = analysis.movableStarts.contains(start)
                     val activeDrag = drag.value
-                    val ghost = activeDrag?.start?.pile == PileId.Tableau(col) && i >= activeDrag.start.index
+                    val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
+                    val ghost = dragStartIndex != null && i >= dragStartIndex
+                    val aboveIsMoving = dragStartIndex != null && dragStartIndex <= (i + 1)
+                    val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
+                    val faceAlpha = when {
+                        hiddenCard == start -> 0f
+                        ghost -> 0.25f
+                        else -> 1f
+                    }
 
                     Box(
                         modifier = Modifier
@@ -638,19 +648,23 @@ private fun TableauColumn(
                             enabled = canStart,
                             onMove = onMove,
                         ) {
-                            CardFace(
-                                card = card,
-                                width = cardW,
-                                height = cardH,
-                                dim = !canStart && !ghost,
-                                modifier = Modifier.alpha(
-                                    when {
-                                        hiddenCard == start -> 0f
-                                        ghost -> 0.25f
-                                        else -> 1f
-                                    }
+                            if (showStackedHidden) {
+                                StackedHiddenCardFace(
+                                    card = card,
+                                    width = cardW,
+                                    height = cardH,
+                                    dim = !canStart && !ghost,
+                                    modifier = Modifier.alpha(faceAlpha),
                                 )
-                            )
+                            } else {
+                                CardFace(
+                                    card = card,
+                                    width = cardW,
+                                    height = cardH,
+                                    dim = !canStart && !ghost,
+                                    modifier = Modifier.alpha(faceAlpha),
+                                )
+                            }
                         }
                     }
                 }
