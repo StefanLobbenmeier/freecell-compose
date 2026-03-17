@@ -702,20 +702,23 @@ private fun TableauColumn(
                     .height(stackH),
                 contentAlignment = Alignment.TopCenter,
             ) {
-                for (i in cards.indices) {
-                    val card = cards[i]
-                    val start = CardRef(pileId, i)
-                    val canStart = analysis.movableStarts.contains(start)
-                    val activeDrag = drag.value
-                    val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
-                    val ghost = dragStartIndex != null && i >= dragStartIndex
-                    val aboveIsMoving = dragStartIndex != null && dragStartIndex <= (i + 1)
-                    val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
-                    val faceAlpha = when {
-                        hiddenCard == start -> 0f
-                        ghost -> 0.25f
-                        else -> 1f
-                    }
+                 for (i in cards.indices) {
+                     val card = cards[i]
+                     val start = CardRef(pileId, i)
+                     val canStart = analysis.movableStarts.contains(start)
+                     val activeDrag = drag.value
+                     val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
+                     val ghost = dragStartIndex != null && i >= dragStartIndex
+                    // If the card directly above is currently moving (drag or auto-move),
+                    // render this one with the full face so it becomes readable immediately.
+                    val autoAboveIsMoving = hiddenCard?.let { it.pile == pileId && it.index == (i + 1) } == true
+                    val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) || autoAboveIsMoving
+                     val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
+                     val faceAlpha = when {
+                         hiddenCard == start -> 0f
+                         ghost -> 0.25f
+                         else -> 1f
+                     }
 
                     Box(
                         modifier = Modifier
