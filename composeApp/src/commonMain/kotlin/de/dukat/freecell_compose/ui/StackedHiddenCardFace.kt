@@ -12,9 +12,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -31,7 +36,6 @@ fun StackedHiddenCardFace(
     modifier: Modifier = Modifier,
 ) {
     val corner = RoundedCornerShape(12.dp)
-    val alpha = if (dim) 0.72f else 1f
 
     val pipColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
     val bg = Color.White
@@ -40,40 +44,59 @@ fun StackedHiddenCardFace(
     val headerSp = with(density) { headerH.toSp() }
     val fontSize = (headerSp.value * 0.78f).coerceIn(8f, 14f).sp
 
+    // Match the same dimming used by CardFace (color matrix scaling).
+    val dimFilter: ColorFilter? = if (dim) {
+        ColorFilter.colorMatrix(
+            ColorMatrix().apply { setToScale(0.72f, 0.72f, 0.72f, 1f) }
+        )
+    } else {
+        null
+    }
+
     Box(
         modifier = modifier
-            .alpha(alpha)
             .clip(corner)
-            .background(bg)
             .border(1.dp, Color(0x26000000), corner)
             .size(width, height)
     ) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 6.dp, top = 3.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = rankLabel(card.rank),
-                color = pipColor,
-                fontSize = fontSize,
-                fontWeight = FontWeight.Black,
-            )
-            SuitPip(
-                suit = card.suit,
-                color = pipColor,
-                size = headerH * 0.62f,
-                modifier = Modifier.padding(start = 3.dp)
-            )
-        }
-
-        // Keep body subtle so header pops.
+        // Inner layer: draw the card's white background here so the dim color matrix
+        // affects it (matching the behavior of the vector cards).
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = headerH)
-                .background(Color(0x00000000))
-        )
+                .drawWithContent {
+                    val f = dimFilter
+                    if (f == null) {
+                        drawRect(bg)
+                        drawContent()
+                    } else {
+                        val paint = Paint().apply { colorFilter = f }
+                        drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
+                        drawRect(bg)
+                        drawContent()
+                        drawContext.canvas.restore()
+                    }
+                }
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 6.dp, top = 1.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = rankLabel(card.rank),
+                    color = pipColor,
+                    fontSize = fontSize,
+                    fontWeight = FontWeight.Black,
+                )
+                SuitPip(
+                    suit = card.suit,
+                    color = pipColor,
+                    size = headerH * 0.62f,
+                    modifier = Modifier.padding(start = 3.dp)
+                )
+            }
+        }
     }
 }
