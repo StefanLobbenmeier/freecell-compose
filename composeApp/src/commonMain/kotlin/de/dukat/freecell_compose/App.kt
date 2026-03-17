@@ -155,7 +155,7 @@ fun App() {
             val baseCardH = baseCardW * (112f / 80f)
             val baseGapX = if (portrait) 8.dp else 10.dp
             val baseTableGapY = if (portrait) 18.dp else 22.dp
-            val baseStackGapY = if (portrait) 24.dp else 18.dp
+            val baseStackGapY = if (portrait) 30.dp else 18.dp
             val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
 
             val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
@@ -167,6 +167,10 @@ fun App() {
             val gapX = baseGapX * s
             val tableGapY = baseTableGapY * s
             val stackGapY = baseStackGapY * s
+
+            // Scale borders with the board scale so they don't eat into content on slim screens.
+            val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
+            val cardBorderW = (1.dp * s).coerceIn(0.5.dp, 1.dp)
 
             Box(
                 modifier = Modifier
@@ -309,6 +313,8 @@ fun App() {
                                 title = "",
                                 cardW = cardW,
                                 cardH = cardH,
+                                slotBorderW = slotBorderW,
+                                cardBorderW = cardBorderW,
                                 state = state,
                                 analysis = analysis,
                                 drag = drag,
@@ -329,6 +335,8 @@ fun App() {
                                 title = "",
                                 cardW = cardW,
                                 cardH = cardH,
+                                slotBorderW = slotBorderW,
+                                cardBorderW = cardBorderW,
                                 state = state,
                                 analysis = analysis,
                                 drag = drag,
@@ -355,6 +363,8 @@ fun App() {
                             cardW = cardW,
                             cardH = cardH,
                             gapY = stackGapY,
+                            slotBorderW = slotBorderW,
+                            cardBorderW = cardBorderW,
                             state = state,
                             analysis = analysis,
                             drag = drag,
@@ -410,6 +420,7 @@ fun App() {
                                     card = card,
                                     width = cardW,
                                     height = cardH,
+                                    borderW = cardBorderW,
                                     modifier = Modifier
                                         .offset(y = stackGapY * i)
                                 )
@@ -538,6 +549,8 @@ private fun PileSlot(
     title: String,
     cardW: Dp,
     cardH: Dp,
+    slotBorderW: Dp,
+    cardBorderW: Dp,
     state: GameState,
     analysis: Analysis,
     drag: MutableState<DragState?>,
@@ -560,16 +573,18 @@ private fun PileSlot(
         else -> 1f
     }
 
+    val corner = RoundedCornerShape(cardCorner(cardW, cardH))
+
     Box(
         modifier = Modifier
             .width(cardW)
             .height(cardH)
             .alpha(alpha)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(corner)
             .border(
-                width = 2.dp,
+                width = slotBorderW,
                 color = if (highlight) Color(0xFFF2E8D5) else Color(0x55F2E8D5),
-                shape = RoundedCornerShape(12.dp)
+                shape = corner
             )
             .background(Color(0x11000000))
             .onGloballyPositioned { coords ->
@@ -599,6 +614,7 @@ private fun PileSlot(
                     card = card,
                     width = cardW,
                     height = cardH,
+                    borderW = cardBorderW,
                     dim = !canStart && !ghost,
                     modifier = Modifier.alpha(
                         when {
@@ -619,6 +635,8 @@ private fun TableauColumn(
     cardW: Dp,
     cardH: Dp,
     gapY: Dp,
+    slotBorderW: Dp,
+    cardBorderW: Dp,
     state: GameState,
     analysis: Analysis,
     drag: MutableState<DragState?>,
@@ -654,7 +672,7 @@ private fun TableauColumn(
             }
     ) {
         if (cards.isEmpty()) {
-            EmptyTableauSlot(cardW, cardH, highlight, dim)
+            EmptyTableauSlot(cardW, cardH, slotBorderW, highlight, dim)
         } else {
             // Classic FreeCell overlap: each next card is shifted down by gapY,
             // so only the top portion of hidden cards remains visible.
@@ -699,6 +717,7 @@ private fun TableauColumn(
                                     card = card,
                                     width = cardW,
                                     height = cardH,
+                                    borderW = cardBorderW,
                                     dim = !canStart && !ghost,
                                     modifier = Modifier.alpha(faceAlpha),
                                 )
@@ -707,6 +726,7 @@ private fun TableauColumn(
                                     card = card,
                                     width = cardW,
                                     height = cardH,
+                                    borderW = cardBorderW,
                                     dim = !canStart && !ghost,
                                     modifier = Modifier.alpha(faceAlpha),
                                 )
@@ -720,22 +740,23 @@ private fun TableauColumn(
 }
 
 @Composable
-private fun EmptyTableauSlot(cardW: Dp, cardH: Dp, highlight: Boolean, dim: Boolean) {
+private fun EmptyTableauSlot(cardW: Dp, cardH: Dp, borderW: Dp, highlight: Boolean, dim: Boolean) {
     val alpha = when {
         highlight -> 1f
         dim -> 0.35f
         else -> 1f
     }
+    val corner = RoundedCornerShape(cardCorner(cardW, cardH))
     Box(
         modifier = Modifier
             .width(cardW)
             .height(cardH)
             .alpha(alpha)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(corner)
             .border(
-                width = 2.dp,
+                width = borderW,
                 color = if (highlight) Color(0xFFF2E8D5) else Color(0x44F2E8D5),
-                shape = RoundedCornerShape(12.dp)
+                shape = corner
             )
             .background(Color(0x0D000000)),
     )
@@ -815,10 +836,13 @@ private fun CardFace(
     card: Card,
     width: Dp,
     height: Dp,
+    borderW: Dp = 1.dp,
     dim: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val vector = card.toPlayingCardVector()
+
+    val corner = RoundedCornerShape(cardCorner(width, height))
 
     val dimScale = if (dim) 0.72f else 1f
     val dimFilter = if (dim) {
@@ -831,9 +855,9 @@ private fun CardFace(
         modifier = modifier
             .width(width)
             .height(height)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(corner)
             .background(Color.Transparent)
-            .border(1.dp, Color(0x22000000), RoundedCornerShape(12.dp)),
+            .border(borderW, Color(0x22000000), corner),
     ) {
         PlayingCardVector(
             vector = vector,
@@ -841,6 +865,12 @@ private fun CardFace(
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+private fun cardCorner(w: Dp, h: Dp): Dp {
+    val minDim = if (w < h) w else h
+    // 80x112 used to look good with 12.dp; keep the same ratio and clamp.
+    return (minDim * 0.15f).coerceIn(4.dp, 12.dp)
 }
 
 @Composable

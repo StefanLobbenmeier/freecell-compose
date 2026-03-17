@@ -32,10 +32,12 @@ fun StackedHiddenCardFace(
     card: Card,
     width: Dp,
     height: Dp,
+    borderW: Dp = 1.dp,
     dim: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val corner = RoundedCornerShape(12.dp)
+    val minDim = if (width < height) width else height
+    val corner = RoundedCornerShape((minDim * 0.15f).coerceIn(4.dp, 12.dp))
 
     val pipColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
     val bg = Color.White
@@ -62,7 +64,7 @@ fun StackedHiddenCardFace(
     Box(
         modifier = modifier
             .clip(corner)
-            .border(1.dp, Color(0x26000000), corner)
+            .border(borderW, Color(0x26000000), corner)
             .size(width, height)
     ) {
         // Inner layer: draw the card's white background here so the dim color matrix
