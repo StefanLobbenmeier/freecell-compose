@@ -61,7 +61,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.dukat.freecell_compose.ui.StackedHiddenCardFace
+import de.dukat.freecell_compose.ui.SimplifiedCardFace
 import de.dukat.freecell_compose.ui.toPlayingCardVector
 import de.dukat.freecell_compose.freecell.model.Analysis
 import de.dukat.freecell_compose.freecell.model.Card
@@ -142,6 +142,7 @@ fun App() {
         ) {
             val compactTop = maxWidth < 560.dp
             val portrait = maxHeight > maxWidth
+            val mobile = maxWidth < 430.dp
             val pagePadding = when {
                 maxWidth < 340.dp -> 4.dp
                 maxWidth < 420.dp -> 8.dp
@@ -152,10 +153,12 @@ fun App() {
             // In portrait, make cards slimmer and increase stack spacing relative to card height
             // so hidden cards remain readable.
             val baseCardW = if (portrait) 70.dp else 80.dp
-            val baseCardH = baseCardW * (112f / 80f)
+            // Mobile: aspect ratio 2:3.
+            val baseCardH = if (portrait) (baseCardW * 1.5f) else (baseCardW * (112f / 80f))
             val baseGapX = if (portrait) 8.dp else 10.dp
             val baseTableGapY = if (portrait) 18.dp else 22.dp
-            val baseStackGapY = if (portrait) 30.dp else 18.dp
+            // Mobile: keep a full header visible for stacked cards.
+            val baseStackGapY = if (portrait) (baseCardH / 3f) else 18.dp
             val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
 
             val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
@@ -166,7 +169,13 @@ fun App() {
             val cardH = baseCardH * s
             val gapX = baseGapX * s
             val tableGapY = baseTableGapY * s
-            val stackGapY = baseStackGapY * s
+            // Don't scale down the tableau overlap spacing; otherwise hidden cards become unreadable
+            // when the board is scaled to fit slim screens.
+            val stackGapY = baseStackGapY
+
+            val cardCorner = cardCorner(cardW, cardH)
+            val headerHMobile = (cardH / 3f)
+            val headerMaxDesktop = 24.dp
 
             // Scale borders with the board scale so they don't eat into content on slim screens.
             val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
@@ -365,6 +374,10 @@ fun App() {
                             gapY = stackGapY,
                             slotBorderW = slotBorderW,
                             cardBorderW = cardBorderW,
+                            portrait = portrait,
+                            simplifiedCorner = cardCorner,
+                            headerHMobile = headerHMobile,
+                            headerMaxDesktop = headerMaxDesktop,
                             state = state,
                             analysis = analysis,
                             drag = drag,
@@ -637,6 +650,10 @@ private fun TableauColumn(
     gapY: Dp,
     slotBorderW: Dp,
     cardBorderW: Dp,
+    portrait: Boolean,
+    simplifiedCorner: Dp,
+    headerHMobile: Dp,
+    headerMaxDesktop: Dp,
     state: GameState,
     analysis: Analysis,
     drag: MutableState<DragState?>,
@@ -713,23 +730,58 @@ private fun TableauColumn(
                             onMove = onMove,
                         ) {
                             if (showStackedHidden) {
-                                StackedHiddenCardFace(
-                                    card = card,
-                                    width = cardW,
-                                    height = cardH,
-                                    borderW = cardBorderW,
-                                    dim = !canStart && !ghost,
-                                    modifier = Modifier.alpha(faceAlpha),
-                                )
+                                if (portrait) {
+                                    SimplifiedCardFace(
+                                        card = card,
+                                        width = cardW,
+                                        height = cardH,
+                                        corner = simplifiedCorner,
+                                        borderW = cardBorderW,
+                                        headerH = headerHMobile,
+                                        headerMaxH = null,
+                                        showLargePip = false,
+                                        dim = !canStart && !ghost,
+                                        modifier = Modifier.alpha(faceAlpha),
+                                    )
+                                } else {
+                                    SimplifiedCardFace(
+                                        card = card,
+                                        width = cardW,
+                                        height = cardH,
+                                        corner = simplifiedCorner,
+                                        borderW = cardBorderW,
+                                        headerH = cardH * 0.22f,
+                                        headerMaxH = headerMaxDesktop,
+                                        showLargePip = false,
+                                        dim = !canStart && !ghost,
+                                        modifier = Modifier.alpha(faceAlpha),
+                                    )
+                                }
                             } else {
-                                CardFace(
-                                    card = card,
-                                    width = cardW,
-                                    height = cardH,
-                                    borderW = cardBorderW,
-                                    dim = !canStart && !ghost,
-                                    modifier = Modifier.alpha(faceAlpha),
-                                )
+                                if (portrait) {
+                                    SimplifiedCardFace(
+                                        card = card,
+                                        width = cardW,
+                                        height = cardH,
+                                        corner = simplifiedCorner,
+                                        borderW = cardBorderW,
+                                        headerH = headerHMobile,
+                                        headerMaxH = null,
+                                        showLargePip = true,
+                                        dim = !canStart && !ghost,
+                                        modifier = Modifier.alpha(faceAlpha),
+                                    )
+                                } else {
+                                    // Desktop foreground cards keep the existing vector designs.
+                                    CardFace(
+                                        card = card,
+                                        width = cardW,
+                                        height = cardH,
+                                        borderW = cardBorderW,
+                                        dim = !canStart && !ghost,
+                                        modifier = Modifier.alpha(faceAlpha),
+                                    )
+                                }
                             }
                         }
                     }
