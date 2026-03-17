@@ -50,6 +50,8 @@ fun SimplifiedCardFace(
     val bg = Color.White
     val shape = RoundedCornerShape(corner)
 
+    val rankText = rankLabel(card.rank)
+
     val actualHeaderH = (if (headerMaxH != null) headerH.coerceAtMost(headerMaxH) else headerH)
         .coerceAtMost(height)
 
@@ -64,7 +66,9 @@ fun SimplifiedCardFace(
 
     // Size text relative to the same unit as the suit icon so they scale together.
     // Slightly oversize the rank to compensate for font metrics looking smaller than the pip.
-    val rankSize = with(density) { (headerUnit * 1.04f).toSp() }
+    val baseRankSize = with(density) { (headerUnit * 1.04f).toSp() }
+    // Two-character ranks ("10") need more room to avoid clipping.
+    val rankSize = baseRankSize *  0.74f
     val rankStyle = TextStyle(
         fontSize = rankSize,
         lineHeight = rankSize,
@@ -84,9 +88,10 @@ fun SimplifiedCardFace(
         null
     }
 
-    val headerPipSize = headerUnit * 0.92f
+    // Keep pips slightly smaller than the rank for better balance at small scales.
+    val headerPipSize = headerUnit * 0.84f
 
-    val bigPipTarget = headerPipSize * 2f
+    val bigPipTarget = headerPipSize * 1.9f
     val availableBelow = (height - actualHeaderH).coerceAtLeast(0.dp)
     val bigPipSize = minDp(minDp(bigPipTarget, width * 0.88f), availableBelow * 0.92f)
 
@@ -124,10 +129,11 @@ fun SimplifiedCardFace(
                 contentAlignment = Alignment.TopStart,
             ) {
                 Text(
-                    text = rankLabel(card.rank),
+                    text = rankText,
                     color = pipColor,
                     style = rankStyle,
                     maxLines = 1,
+                    softWrap = false,
                     modifier = Modifier.offset(y = rankNudgeY),
                 )
             }
@@ -136,7 +142,7 @@ fun SimplifiedCardFace(
                 modifier = Modifier
                     .width(halfW)
                     .fillMaxSize(),
-                contentAlignment = Alignment.TopEnd,
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 SuitPip(
                     suit = card.suit,
