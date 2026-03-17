@@ -40,6 +40,12 @@ fun StackedHiddenCardFace(
     val pipColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
     val bg = Color.White
     val headerH = (height * 0.18f).coerceIn(10.dp, 22.dp)
+
+    val padStart = (width * 0.08f).coerceIn(3.dp, 8.dp)
+    val padTop = (height * 0.012f).coerceIn(0.dp, 2.dp)
+    val padEnd = (width * 0.10f).coerceIn(3.dp, 10.dp)
+    val pipGap = (width * 0.035f).coerceIn(1.dp, 5.dp)
+
     val density = LocalDensity.current
     val headerSp = with(density) { headerH.toSp() }
     val fontSize = (headerSp.value * 0.78f).coerceIn(8f, 14f).sp
@@ -81,7 +87,7 @@ fun StackedHiddenCardFace(
             Row(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 6.dp, top = 1.dp, end = 8.dp),
+                    .padding(start = padStart, top = padTop, end = padEnd),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -94,7 +100,7 @@ fun StackedHiddenCardFace(
                     suit = card.suit,
                     color = pipColor,
                     size = headerH * 0.62f,
-                    modifier = Modifier.padding(start = 3.dp)
+                    modifier = Modifier.padding(start = pipGap)
                 )
             }
         }

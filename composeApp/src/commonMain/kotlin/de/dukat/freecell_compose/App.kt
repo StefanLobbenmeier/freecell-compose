@@ -138,6 +138,7 @@ fun App() {
                 .background(Color(0xFF0E3B2B))
         ) {
             val compactTop = maxWidth < 560.dp
+            val portrait = maxHeight > maxWidth
             val pagePadding = when {
                 maxWidth < 340.dp -> 4.dp
                 maxWidth < 420.dp -> 8.dp
@@ -145,11 +146,13 @@ fun App() {
             }
 
             // Keep all 8 tableau columns visible by scaling the whole board's measurements.
-            val baseCardW = 80.dp
-            val baseCardH = 112.dp
-            val baseGapX = 10.dp
-            val baseTableGapY = 22.dp
-            val baseStackGapY = 18.dp
+            // In portrait, make cards slimmer and increase stack spacing relative to card height
+            // so hidden cards remain readable.
+            val baseCardW = if (portrait) 70.dp else 80.dp
+            val baseCardH = baseCardW * (112f / 80f)
+            val baseGapX = if (portrait) 8.dp else 10.dp
+            val baseTableGapY = if (portrait) 18.dp else 22.dp
+            val baseStackGapY = if (portrait) 24.dp else 18.dp
             val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
 
             val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
