@@ -54,6 +54,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -70,6 +71,8 @@ import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import de.dukat.freecell_compose.freecell.FreecellStore
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Composable
@@ -426,6 +429,7 @@ private data class DragState(
     val grabOffsetLocal: Offset,
     val pointer: Offset,
     val hoverPile: PileId?,
+    val cardSizePx: Size,
 )
 
 private class PileRects {
@@ -447,6 +451,39 @@ private class PileRects {
     }
 
     fun get(id: PileId): Rect? = rects[id]
+}
+
+private fun pickBestDropTarget(
+    pileRects: PileRects,
+    moves: List<Move>,
+    draggedRect: Rect,
+    leewayPx: Float,
+): PileId? {
+    if (moves.isEmpty()) return null
+
+    val dc = draggedRect.center
+    var best: Pair<PileId, Float>? = null
+
+    for (id in moves.asSequence().map { it.to }.distinct()) {
+        val r = pileRects.get(id) ?: continue
+        val expanded = Rect(
+            left = r.left - leewayPx,
+            top = r.top - leewayPx,
+            right = r.right + leewayPx,
+            bottom = r.bottom + leewayPx,
+        )
+
+        // Require intersection with an expanded target so cancelling is possible.
+        val overlapW = min(draggedRect.right, expanded.right) - max(draggedRect.left, expanded.left)
+        val overlapH = min(draggedRect.bottom, expanded.bottom) - max(draggedRect.top, expanded.top)
+        if (overlapW <= 0f || overlapH <= 0f) continue
+
+        val rc = expanded.center
+        val dist2 = (dc.x - rc.x) * (dc.x - rc.x) + (dc.y - rc.y) * (dc.y - rc.y)
+        if (best == null || dist2 < best.second) best = id to dist2
+    }
+
+    return best?.first
 }
 
 private class CardRects {
@@ -594,6 +631,7 @@ private fun TableauColumn(
 ) {
     val cards = state.tableau[col]
     val pileId = PileId.Tableau(col)
+    val density = LocalDensity.current
     val alpha = when {
         highlight -> 1f
         dim -> 0.35f
@@ -606,8 +644,13 @@ private fun TableauColumn(
             .alpha(alpha)
             .onGloballyPositioned { coords ->
                 val pos = coords.positionInRoot()
-                val rect = Rect(pos, Size(coords.size.width.toFloat(), coords.size.height.toFloat()))
-                pileRects.set(pileId, rect)
+                // Drop target is the next empty position below the current stack.
+                // Using the full column rect makes hover selection too eager in slim layouts.
+                val cardWpx = with(density) { cardW.toPx() }
+                val cardHpx = with(density) { cardH.toPx() }
+                val gapPx = with(density) { gapY.toPx() }
+                val dropTopLeft = pos + Offset(0f, gapPx * cards.size)
+                pileRects.set(pileId, Rect(dropTopLeft, Size(cardWpx, cardHpx)))
             }
     ) {
         if (cards.isEmpty()) {
@@ -712,11 +755,13 @@ private fun DraggableCardStart(
 ) {
     val moves = analysis.movesFrom[start].orEmpty()
     var topLeftRoot by remember { mutableStateOf(Offset.Zero) }
+    var sizePx by remember { mutableStateOf(Size.Zero) }
     Box(
         modifier = Modifier
             .onGloballyPositioned { coords ->
                 topLeftRoot = coords.positionInRoot()
-                val rect = Rect(topLeftRoot, Size(coords.size.width.toFloat(), coords.size.height.toFloat()))
+                sizePx = Size(coords.size.width.toFloat(), coords.size.height.toFloat())
+                val rect = Rect(topLeftRoot, sizePx)
                 cardRects.set(start, rect)
             }
             .pointerInput(enabled, moves) {
@@ -724,13 +769,18 @@ private fun DraggableCardStart(
                 detectDragGestures(
                     onDragStart = { offset ->
                         val pointer = topLeftRoot + offset
+                        val topLeft = pointer - offset
+                        val draggedRect = Rect(topLeft, sizePx)
+                        val leewayPx = (min(sizePx.width, sizePx.height) * 0.12f).coerceIn(6f, 18f)
+                        val hover = pickBestDropTarget(pileRects, moves, draggedRect, leewayPx)
                         drag.value = DragState(
                             start = start,
                             cards = cards,
                             moves = moves,
                             grabOffsetLocal = offset,
                             pointer = pointer,
-                            hoverPile = pileRects.hitTest(pointer),
+                            hoverPile = hover,
+                            cardSizePx = sizePx,
                         )
                     },
                     onDragEnd = {
@@ -746,7 +796,10 @@ private fun DraggableCardStart(
                         val cur = drag.value
                         if (cur != null) {
                             val pointer = cur.pointer + amount
-                            val hover = pileRects.hitTest(pointer)
+                            val topLeft = pointer - cur.grabOffsetLocal
+                            val draggedRect = Rect(topLeft, cur.cardSizePx)
+                            val leewayPx = (min(cur.cardSizePx.width, cur.cardSizePx.height) * 0.12f).coerceIn(6f, 18f)
+                            val hover = pickBestDropTarget(pileRects, cur.moves, draggedRect, leewayPx)
                             drag.value = cur.copy(pointer = pointer, hoverPile = hover)
                         }
                     }
