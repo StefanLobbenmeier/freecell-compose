@@ -75,6 +75,14 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+private data class CardFaceProps(
+    val showStackedHidden: Boolean = false,
+    val dim: Boolean = false,
+    val modifier: Modifier = Modifier,
+)
+
+private typealias CardFaceRenderer = @Composable (card: Card, props: CardFaceProps) -> Unit
+
 @Composable
 fun App() {
     MaterialTheme {
@@ -182,6 +190,62 @@ fun App() {
             // Scale borders with the board scale so they don't eat into content on slim screens.
             val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
             val cardBorderW = (1.dp * s).coerceIn(0.5.dp, 1.dp)
+
+            val renderCardFace: CardFaceRenderer = { card, props ->
+                if (props.showStackedHidden) {
+                    if (portrait) {
+                        SimplifiedCardFace(
+                            card = card,
+                            width = cardW,
+                            height = cardH,
+                            corner = cardCorner,
+                            borderW = cardBorderW,
+                            headerH = headerHMobile,
+                            headerMaxH = null,
+                            showLargePip = false,
+                            dim = props.dim,
+                            modifier = props.modifier,
+                        )
+                    } else {
+                        SimplifiedCardFace(
+                            card = card,
+                            width = cardW,
+                            height = cardH,
+                            corner = cardCorner,
+                            borderW = cardBorderW,
+                            headerH = cardH * 0.22f,
+                            headerMaxH = headerMaxDesktop,
+                            showLargePip = false,
+                            dim = props.dim,
+                            modifier = props.modifier,
+                        )
+                    }
+                } else {
+                    if (portrait) {
+                        SimplifiedCardFace(
+                            card = card,
+                            width = cardW,
+                            height = cardH,
+                            corner = cardCorner,
+                            borderW = cardBorderW,
+                            headerH = headerHMobile,
+                            headerMaxH = null,
+                            showLargePip = true,
+                            dim = props.dim,
+                            modifier = props.modifier,
+                        )
+                    } else {
+                        CardFace(
+                            card = card,
+                            width = cardW,
+                            height = cardH,
+                            borderW = cardBorderW,
+                            dim = props.dim,
+                            modifier = props.modifier,
+                        )
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier
@@ -321,17 +385,16 @@ fun App() {
                         for (i in 0 until 4) {
                             PileSlot(
                                 id = PileId.FreeCell(i),
-                                title = "",
                                 cardW = cardW,
                                 cardH = cardH,
                                 slotBorderW = slotBorderW,
-                                cardBorderW = cardBorderW,
                                 state = state,
                                 analysis = analysis,
                                 drag = drag,
                                 pileRects = pileRects,
                                 cardRects = cardRects,
                                 onMove = ::tryMove,
+                                renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
                                 dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
                                 hideCard = autoAnim?.from == CardRef(PileId.FreeCell(i), 0),
@@ -343,17 +406,16 @@ fun App() {
                         for (suit in Suit.entries) {
                             PileSlot(
                                 id = PileId.Foundation(suit),
-                                title = "",
                                 cardW = cardW,
                                 cardH = cardH,
                                 slotBorderW = slotBorderW,
-                                cardBorderW = cardBorderW,
                                 state = state,
                                 analysis = analysis,
                                 drag = drag,
                                 pileRects = pileRects,
                                 cardRects = cardRects,
                                 onMove = ::tryMove,
+                                renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
                                 dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
                             )
@@ -370,27 +432,23 @@ fun App() {
                     ) {
                     for (col in 0 until 8) {
                         TableauColumn(
-                            col = col,
-                            cardW = cardW,
-                            cardH = cardH,
-                            gapY = stackGapY,
-                            slotBorderW = slotBorderW,
-                            cardBorderW = cardBorderW,
-                            portrait = portrait,
-                            simplifiedCorner = cardCorner,
-                            headerHMobile = headerHMobile,
-                            headerMaxDesktop = headerMaxDesktop,
-                            state = state,
-                            analysis = analysis,
-                            drag = drag,
-                            pileRects = pileRects,
-                            cardRects = cardRects,
-                            onMove = ::tryMove,
-                            highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
-                            dim = isDimmingPile(drag.value, PileId.Tableau(col)),
-                            hiddenCard = autoAnim?.from,
-                        )
-                    }
+                             col = col,
+                             cardW = cardW,
+                             cardH = cardH,
+                             gapY = stackGapY,
+                             slotBorderW = slotBorderW,
+                             state = state,
+                             analysis = analysis,
+                             drag = drag,
+                             pileRects = pileRects,
+                             cardRects = cardRects,
+                             onMove = ::tryMove,
+                             renderCardFace = renderCardFace,
+                             highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
+                             dim = isDimmingPile(drag.value, PileId.Tableau(col)),
+                             hiddenCard = autoAnim?.from,
+                         )
+                     }
                     }
             }
 
@@ -409,7 +467,7 @@ fun App() {
                             .offset { IntOffset(pos.x.roundToInt(), pos.y.roundToInt()) }
                             .alpha(0.98f)
                     ) {
-                        CardFace(card = a.card, width = cardW, height = cardH)
+                        renderCardFace(a.card, CardFaceProps())
                     }
                 }
 
@@ -431,13 +489,11 @@ fun App() {
                                 .height(stackH)
                         ) {
                             for ((i, card) in d.cards.withIndex()) {
-                                CardFace(
-                                    card = card,
-                                    width = cardW,
-                                    height = cardH,
-                                    borderW = cardBorderW,
-                                    modifier = Modifier
-                                        .offset(y = stackGapY * i)
+                                renderCardFace(
+                                    card,
+                                    CardFaceProps(
+                                        modifier = Modifier.offset(y = stackGapY * i),
+                                    )
                                 )
                             }
                         }
@@ -561,17 +617,17 @@ private fun startForMove(state: GameState, move: Move): CardRef? = extractAutoMo
 @Composable
 private fun PileSlot(
     id: PileId,
-    title: String,
+    title: String = "",
     cardW: Dp,
     cardH: Dp,
     slotBorderW: Dp,
-    cardBorderW: Dp,
     state: GameState,
     analysis: Analysis,
     drag: MutableState<DragState?>,
     pileRects: PileRects,
     cardRects: CardRects,
     onMove: (Move) -> Unit,
+    renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
     hideCard: Boolean = false,
@@ -625,18 +681,17 @@ private fun PileSlot(
                 enabled = canStart,
                 onMove = onMove,
             ) {
-                CardFace(
-                    card = card,
-                    width = cardW,
-                    height = cardH,
-                    borderW = cardBorderW,
-                    dim = !canStart && !ghost,
-                    modifier = Modifier.alpha(
-                        when {
-                            hideCard -> 0f
-                            ghost -> 0.25f
-                            else -> 1f
-                        }
+                renderCardFace(
+                    card,
+                    CardFaceProps(
+                        dim = !canStart && !ghost,
+                        modifier = Modifier.alpha(
+                            when {
+                                hideCard -> 0f
+                                ghost -> 0.25f
+                                else -> 1f
+                            }
+                        ),
                     )
                 )
             }
@@ -651,17 +706,13 @@ private fun TableauColumn(
     cardH: Dp,
     gapY: Dp,
     slotBorderW: Dp,
-    cardBorderW: Dp,
-    portrait: Boolean,
-    simplifiedCorner: Dp,
-    headerHMobile: Dp,
-    headerMaxDesktop: Dp,
     state: GameState,
     analysis: Analysis,
     drag: MutableState<DragState?>,
     pileRects: PileRects,
     cardRects: CardRects,
     onMove: (Move) -> Unit,
+    renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
     hiddenCard: CardRef? = null,
@@ -734,60 +785,14 @@ private fun TableauColumn(
                             enabled = canStart,
                             onMove = onMove,
                         ) {
-                            if (showStackedHidden) {
-                                if (portrait) {
-                                    SimplifiedCardFace(
-                                        card = card,
-                                        width = cardW,
-                                        height = cardH,
-                                        corner = simplifiedCorner,
-                                        borderW = cardBorderW,
-                                        headerH = headerHMobile,
-                                        headerMaxH = null,
-                                        showLargePip = false,
-                                        dim = !canStart && !ghost,
-                                        modifier = Modifier.alpha(faceAlpha),
-                                    )
-                                } else {
-                                    SimplifiedCardFace(
-                                        card = card,
-                                        width = cardW,
-                                        height = cardH,
-                                        corner = simplifiedCorner,
-                                        borderW = cardBorderW,
-                                        headerH = cardH * 0.22f,
-                                        headerMaxH = headerMaxDesktop,
-                                        showLargePip = false,
-                                        dim = !canStart && !ghost,
-                                        modifier = Modifier.alpha(faceAlpha),
-                                    )
-                                }
-                            } else {
-                                if (portrait) {
-                                    SimplifiedCardFace(
-                                        card = card,
-                                        width = cardW,
-                                        height = cardH,
-                                        corner = simplifiedCorner,
-                                        borderW = cardBorderW,
-                                        headerH = headerHMobile,
-                                        headerMaxH = null,
-                                        showLargePip = true,
-                                        dim = !canStart && !ghost,
-                                        modifier = Modifier.alpha(faceAlpha),
-                                    )
-                                } else {
-                                    // Desktop foreground cards keep the existing vector designs.
-                                    CardFace(
-                                        card = card,
-                                        width = cardW,
-                                        height = cardH,
-                                        borderW = cardBorderW,
-                                        dim = !canStart && !ghost,
-                                        modifier = Modifier.alpha(faceAlpha),
-                                    )
-                                }
-                            }
+                            renderCardFace(
+                                card,
+                                CardFaceProps(
+                                    showStackedHidden = showStackedHidden,
+                                    dim = !canStart && !ghost,
+                                    modifier = Modifier.alpha(faceAlpha),
+                                )
+                            )
                         }
                     }
                 }
