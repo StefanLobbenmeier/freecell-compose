@@ -4,7 +4,7 @@ import de.dukat.freecell_compose.freecell.model.GameState
 import java.nio.file.Files
 import java.nio.file.Path
 
-actual object PlatformGameStatePersistence : GameStatePersistence {
+private class DesktopGameStatePersistence : GameStatePersistence {
     private val savePath: Path
         get() = Path.of(System.getProperty("user.home"), ".freecell-compose", "restore-point.txt")
 
@@ -20,3 +20,5 @@ actual object PlatformGameStatePersistence : GameStatePersistence {
         }
     }
 }
+
+actual fun createPlatformGameStatePersistence(): GameStatePersistence = DesktopGameStatePersistence()

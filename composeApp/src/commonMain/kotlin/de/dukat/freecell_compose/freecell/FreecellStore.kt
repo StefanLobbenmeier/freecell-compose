@@ -22,7 +22,7 @@ data class UiState(
 
 class FreecellStore(
     initial: GameState? = null,
-    private val persistence: GameStatePersistence = PlatformGameStatePersistence,
+    private val persistence: GameStatePersistence = createPlatformGameStatePersistence(),
 ) {
     private data class HistoryEntry(
         val state: GameState,

@@ -16,7 +16,7 @@ object NoOpGameStatePersistence : GameStatePersistence {
     override fun save(state: GameState) = Unit
 }
 
-expect object PlatformGameStatePersistence : GameStatePersistence
+expect fun createPlatformGameStatePersistence(): GameStatePersistence
 
 internal const val GAME_STATE_STORAGE_KEY = "freecell-compose.game-state"
 
