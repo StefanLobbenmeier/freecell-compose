@@ -2,6 +2,7 @@ package de.dukat.freecell_compose
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -376,6 +377,11 @@ fun App() {
                     store.tryMove(move)
                 }
 
+                fun tryClickMove(start: CardRef) {
+                    autoSolveHold = false
+                    store.tryClickMove(start)
+                }
+
                     // Top row: freecells + foundations
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -394,6 +400,7 @@ fun App() {
                                 pileRects = pileRects,
                                 cardRects = cardRects,
                                 onMove = ::tryMove,
+                                onClickMove = ::tryClickMove,
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
                                 dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
@@ -415,6 +422,7 @@ fun App() {
                                 pileRects = pileRects,
                                 cardRects = cardRects,
                                 onMove = ::tryMove,
+                                onClickMove = ::tryClickMove,
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
                                 dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
@@ -439,13 +447,14 @@ fun App() {
                              slotBorderW = slotBorderW,
                              state = state,
                              analysis = analysis,
-                             drag = drag,
-                             pileRects = pileRects,
-                             cardRects = cardRects,
-                             onMove = ::tryMove,
-                             renderCardFace = renderCardFace,
-                             highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
-                             dim = isDimmingPile(drag.value, PileId.Tableau(col)),
+                              drag = drag,
+                              pileRects = pileRects,
+                              cardRects = cardRects,
+                              onMove = ::tryMove,
+                              onClickMove = ::tryClickMove,
+                              renderCardFace = renderCardFace,
+                              highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
+                              dim = isDimmingPile(drag.value, PileId.Tableau(col)),
                              hiddenCard = autoAnim?.from,
                          )
                      }
@@ -627,6 +636,7 @@ private fun PileSlot(
     pileRects: PileRects,
     cardRects: CardRects,
     onMove: (Move) -> Unit,
+    onClickMove: (CardRef) -> Unit,
     renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
@@ -680,6 +690,7 @@ private fun PileSlot(
                 cardRects = cardRects,
                 enabled = canStart,
                 onMove = onMove,
+                onClickMove = onClickMove,
             ) {
                 renderCardFace(
                     card,
@@ -712,6 +723,7 @@ private fun TableauColumn(
     pileRects: PileRects,
     cardRects: CardRects,
     onMove: (Move) -> Unit,
+    onClickMove: (CardRef) -> Unit,
     renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
@@ -784,6 +796,7 @@ private fun TableauColumn(
                             cardRects = cardRects,
                             enabled = canStart,
                             onMove = onMove,
+                            onClickMove = onClickMove,
                         ) {
                             renderCardFace(
                                 card,
@@ -834,6 +847,7 @@ private fun DraggableCardStart(
     cardRects: CardRects,
     enabled: Boolean = true,
     onMove: (Move) -> Unit,
+    onClickMove: (CardRef) -> Unit,
     content: @Composable () -> Unit,
 ) {
     val moves = analysis.movesFrom[start].orEmpty()
@@ -846,6 +860,9 @@ private fun DraggableCardStart(
                 sizePx = Size(coords.size.width.toFloat(), coords.size.height.toFloat())
                 val rect = Rect(topLeftRoot, sizePx)
                 cardRects.set(start, rect)
+            }
+            .clickable(enabled = enabled && moves.isNotEmpty()) {
+                onClickMove(start)
             }
             .pointerInput(enabled, moves) {
                 if (!enabled || moves.isEmpty()) return@pointerInput

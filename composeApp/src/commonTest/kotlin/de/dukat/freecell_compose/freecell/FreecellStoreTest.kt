@@ -7,6 +7,7 @@ import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -49,5 +50,83 @@ class FreecellStoreTest {
         store.tryMove(Move(from = PileId.Tableau(2), fromIndex = 1, to = PileId.FreeCell(3), count = 1))
 
         assertNull(store.uiState.value.analysis.movesFrom[startRef]?.firstOrNull { it.to == toCol })
+    }
+
+    @Test
+    fun tryClickMove_cyclesThroughDestinationsForSameCard() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Spades, 6)),
+                listOf(Card(Suit.Hearts, 7)),
+                listOf(Card(Suit.Diamonds, 7)),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+            ),
+            freeCells = List(4) { null },
+            foundations = Suit.entries.associateWith { emptyList<Card>() },
+        )
+
+        val store = FreecellStore(state)
+
+        store.tryClickMove(CardRef(PileId.Tableau(0), 0))
+        assertEquals(listOf(Card(Suit.Hearts, 7), Card(Suit.Spades, 6)), store.uiState.value.state.tableau[1])
+
+        store.tryClickMove(CardRef(PileId.Tableau(1), 1))
+        assertEquals(listOf(Card(Suit.Diamonds, 7), Card(Suit.Spades, 6)), store.uiState.value.state.tableau[2])
+    }
+
+    @Test
+    fun tryClickMove_prefersFoundationThenEmptyColumnBeforeFreeCell() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Clubs, 1)),
+                emptyList(),
+                listOf(Card(Suit.Diamonds, 5)),
+                listOf(Card(Suit.Hearts, 5)),
+                listOf(Card(Suit.Spades, 5)),
+                listOf(Card(Suit.Clubs, 5)),
+                listOf(Card(Suit.Diamonds, 6)),
+                listOf(Card(Suit.Hearts, 6)),
+            ),
+            freeCells = List(4) { null },
+            foundations = Suit.entries.associateWith { emptyList<Card>() },
+        )
+
+        val store = FreecellStore(state)
+
+        store.tryClickMove(CardRef(PileId.Tableau(0), 0))
+        assertEquals(listOf(Card(Suit.Clubs, 1)), store.uiState.value.state.foundations.getValue(Suit.Clubs))
+
+        store.tryClickMove(CardRef(PileId.Foundation(Suit.Clubs), 0))
+        assertEquals(listOf(Card(Suit.Clubs, 1)), store.uiState.value.state.tableau[1])
+    }
+
+    @Test
+    fun tryClickMove_usesLeftmostFreeCellWhenNoOtherOptionExists() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Clubs, 1)),
+                listOf(Card(Suit.Diamonds, 5)),
+                listOf(Card(Suit.Hearts, 5)),
+                listOf(Card(Suit.Spades, 5)),
+                listOf(Card(Suit.Clubs, 5)),
+                listOf(Card(Suit.Diamonds, 6)),
+                listOf(Card(Suit.Hearts, 6)),
+                listOf(Card(Suit.Spades, 6)),
+            ),
+            freeCells = List(4) { null },
+            foundations = Suit.entries.associateWith { emptyList<Card>() },
+        )
+
+        val store = FreecellStore(state)
+
+        store.tryClickMove(CardRef(PileId.Tableau(0), 0))
+        assertEquals(listOf(Card(Suit.Clubs, 1)), store.uiState.value.state.foundations.getValue(Suit.Clubs))
+
+        store.tryClickMove(CardRef(PileId.Foundation(Suit.Clubs), 0))
+        assertEquals(Card(Suit.Clubs, 1), store.uiState.value.state.freeCells[0])
     }
 }
