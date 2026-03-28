@@ -66,6 +66,75 @@
         navigator.serviceWorker.addEventListener('controllerchange', function () {
             location.reload();
         });
+
+        // If the app is stuck on a broken SW cache (e.g. a partial upgrade where a
+        // required .wasm is missing), self-heal by unregistering SW + clearing caches.
+        // This is a last resort and only triggers after repeated load failures.
+        var BOOT_FAIL_KEY = 'freecell_boot_fail_count';
+        var MAX_FAILS_BEFORE_RESET = 2;
+
+        function getFailCount() {
+            try { return Number(localStorage.getItem(BOOT_FAIL_KEY) || '0') || 0; } catch (_) { return 0; }
+        }
+
+        function setFailCount(n) {
+            try { localStorage.setItem(BOOT_FAIL_KEY, String(n)); } catch (_) {}
+        }
+
+        function looksLikeMissingCriticalAsset(reason) {
+            var msg = '';
+            try {
+                msg = String((reason && (reason.message || reason)) || '');
+            } catch (_) {
+                msg = '';
+            }
+            msg = msg.toLowerCase();
+            return msg.indexOf('wasm') >= 0 || msg.indexOf('webassembly') >= 0 || msg.indexOf('compile') >= 0 || msg.indexOf('instantiate') >= 0 || msg.indexOf('404') >= 0;
+        }
+
+        async function nukeServiceWorkerAndCaches() {
+            try {
+                var regs = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(regs.map(function (r) { return r.unregister(); }));
+            } catch (_) {}
+            try {
+                if (!('caches' in window)) return;
+                var keys = await caches.keys();
+                await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            } catch (_) {}
+        }
+
+        window.addEventListener('unhandledrejection', function (e) {
+            if (!e || !looksLikeMissingCriticalAsset(e.reason)) return;
+            var fails = getFailCount() + 1;
+            setFailCount(fails);
+
+            if (fails < MAX_FAILS_BEFORE_RESET) {
+                location.reload();
+                return;
+            }
+
+            nukeServiceWorkerAndCaches().then(function () {
+                setFailCount(0);
+                location.replace(location.href);
+            });
+        });
+
+        window.addEventListener('error', function (e) {
+            if (!e || !looksLikeMissingCriticalAsset(e.error || e.message)) return;
+            var fails = getFailCount() + 1;
+            setFailCount(fails);
+
+            if (fails < MAX_FAILS_BEFORE_RESET) {
+                location.reload();
+                return;
+            }
+
+            nukeServiceWorkerAndCaches().then(function () {
+                setFailCount(0);
+                location.replace(location.href);
+            });
+        });
     })();
 </script>
 </body>
