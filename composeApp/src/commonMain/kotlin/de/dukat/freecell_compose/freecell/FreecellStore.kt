@@ -20,7 +20,10 @@ data class UiState(
     val canUndo: Boolean = false,
 )
 
-class FreecellStore(initial: GameState = newModelGame()) {
+class FreecellStore(
+    initial: GameState? = null,
+    private val persistence: GameStatePersistence = PlatformGameStatePersistence,
+) {
     private data class HistoryEntry(
         val state: GameState,
         val move: Move,
@@ -28,25 +31,30 @@ class FreecellStore(initial: GameState = newModelGame()) {
     )
 
     private val history = ArrayDeque<HistoryEntry>()
+    private val initialState = initial ?: persistence.load() ?: newModelGame()
 
     val uiState : StateFlow<UiState> field =  MutableStateFlow(
         UiState(
-            state = initial,
-            analysis = analyze(initial),
+            state = initialState,
+            analysis = analyze(initialState),
             message = null,
             canUndo = false,
         )
     )
 
+    init {
+        persistence.save(initialState)
+    }
+
     fun newGame(seed: Int? = null) {
         history.clear()
         val s = newModelGame(seed)
-        uiState.value = UiState(state = s, analysis = analyze(s), message = null, canUndo = false)
+        publish(s)
     }
 
     fun undo() {
         val prev = history.removeLastOrNull() ?: return
-        uiState.value = UiState(state = prev.state, analysis = analyze(prev.state), message = null, canUndo = history.isNotEmpty())
+        publish(prev.state)
     }
 
     fun tryMove(move: Move) {
@@ -58,7 +66,7 @@ class FreecellStore(initial: GameState = newModelGame()) {
             if (movedCard != null) {
                 history.addLast(HistoryEntry(state = cur, move = move, movedCard = movedCard))
             }
-            uiState.value = UiState(state = next, analysis = analyze(next), message = null, canUndo = history.isNotEmpty())
+            publish(next)
         } else {
             uiState.value = uiState.value.copy(message = r.exceptionOrNull()?.message ?: "Illegal move")
         }
@@ -87,8 +95,13 @@ class FreecellStore(initial: GameState = newModelGame()) {
         val movedCard = movedCardFor(cur, move) ?: return null
         val next = applyMove(cur, move).getOrNull() ?: return null
         history.addLast(HistoryEntry(state = cur, move = move, movedCard = movedCard))
-        uiState.value = UiState(state = next, analysis = analyze(next), message = null, canUndo = history.isNotEmpty())
+        publish(next)
         return move
+    }
+
+    private fun publish(state: GameState) {
+        persistence.save(state)
+        uiState.value = UiState(state = state, analysis = analyze(state), message = null, canUndo = history.isNotEmpty())
     }
 
     private fun recentVisitedPiles(card: Card, currentPile: PileId): Set<PileId> {
