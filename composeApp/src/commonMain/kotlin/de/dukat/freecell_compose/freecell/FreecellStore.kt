@@ -1,8 +1,11 @@
 package de.dukat.freecell_compose.freecell
 
 import de.dukat.freecell_compose.freecell.model.Analysis
+import de.dukat.freecell_compose.freecell.model.Card
+import de.dukat.freecell_compose.freecell.model.CardRef
 import de.dukat.freecell_compose.freecell.model.GameState
 import de.dukat.freecell_compose.freecell.model.Move
+import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.analyze
 import de.dukat.freecell_compose.freecell.model.applyMove
 import de.dukat.freecell_compose.freecell.model.newGame as newModelGame
@@ -21,7 +24,7 @@ class FreecellStore(initial: GameState = newModelGame()) {
     private data class HistoryEntry(
         val state: GameState,
         val move: Move,
-        val movedCard: de.dukat.freecell_compose.freecell.model.Card,
+        val movedCard: Card,
     )
 
     private val history = ArrayDeque<HistoryEntry>()
@@ -61,15 +64,19 @@ class FreecellStore(initial: GameState = newModelGame()) {
         }
     }
 
-    fun tryClickMove(start: de.dukat.freecell_compose.freecell.model.CardRef) {
+    fun pickClickMove(start: CardRef): Move? {
         val cur = uiState.value.state
         val moves = uiState.value.analysis.movesFrom[start].orEmpty()
-        if (moves.isEmpty()) return
+        if (moves.isEmpty()) return null
 
-        val movedCard = cardAt(cur, start) ?: return
+        val movedCard = cardAt(cur, start) ?: return null
         val prioritizedMoves = prioritizeClickMoves(cur, moves)
         val visitedPiles = recentVisitedPiles(movedCard, start.pile)
-        val move = prioritizedMoves.firstOrNull { it.to !in visitedPiles } ?: prioritizedMoves.firstOrNull() ?: return
+        return prioritizedMoves.firstOrNull { it.to !in visitedPiles } ?: prioritizedMoves.firstOrNull()
+    }
+
+    fun tryClickMove(start: CardRef) {
+        val move = pickClickMove(start) ?: return
         tryMove(move)
     }
 
@@ -84,7 +91,7 @@ class FreecellStore(initial: GameState = newModelGame()) {
         return move
     }
 
-    private fun recentVisitedPiles(card: de.dukat.freecell_compose.freecell.model.Card, currentPile: de.dukat.freecell_compose.freecell.model.PileId): Set<de.dukat.freecell_compose.freecell.model.PileId> {
+    private fun recentVisitedPiles(card: Card, currentPile: PileId): Set<PileId> {
         val visited = linkedSetOf(currentPile)
         for (entry in history.asReversed()) {
             if (entry.movedCard != card) break
@@ -98,24 +105,24 @@ class FreecellStore(initial: GameState = newModelGame()) {
         val tableauToNonEmpty = moves
             .filter { move ->
                 val to = move.to
-                to is de.dukat.freecell_compose.freecell.model.PileId.Tableau && state.tableau[to.index].isNotEmpty()
+                to is PileId.Tableau && state.tableau[to.index].isNotEmpty()
             }
-            .sortedBy { (it.to as de.dukat.freecell_compose.freecell.model.PileId.Tableau).index }
+            .sortedBy { (it.to as PileId.Tableau).index }
 
         val foundations = moves
-            .filter { it.to is de.dukat.freecell_compose.freecell.model.PileId.Foundation }
-            .sortedBy { (it.to as de.dukat.freecell_compose.freecell.model.PileId.Foundation).suit.ordinal }
+            .filter { it.to is PileId.Foundation }
+            .sortedBy { (it.to as PileId.Foundation).suit.ordinal }
 
         val tableauToEmpty = moves
             .filter { move ->
                 val to = move.to
-                to is de.dukat.freecell_compose.freecell.model.PileId.Tableau && state.tableau[to.index].isEmpty()
+                to is PileId.Tableau && state.tableau[to.index].isEmpty()
             }
-            .sortedBy { (it.to as de.dukat.freecell_compose.freecell.model.PileId.Tableau).index }
+            .sortedBy { (it.to as PileId.Tableau).index }
 
         val leftmostFreeCell = moves
-            .filter { it.to is de.dukat.freecell_compose.freecell.model.PileId.FreeCell }
-            .minByOrNull { (it.to as de.dukat.freecell_compose.freecell.model.PileId.FreeCell).index }
+            .filter { it.to is PileId.FreeCell }
+            .minByOrNull { (it.to as PileId.FreeCell).index }
 
         return buildList {
             addAll(tableauToNonEmpty)
@@ -125,19 +132,19 @@ class FreecellStore(initial: GameState = newModelGame()) {
         }
     }
 
-    private fun movedCardFor(state: GameState, move: Move): de.dukat.freecell_compose.freecell.model.Card? {
+    private fun movedCardFor(state: GameState, move: Move): Card? {
         return when (val from = move.from) {
-            is de.dukat.freecell_compose.freecell.model.PileId.Tableau -> state.tableau[from.index].getOrNull(move.fromIndex)
-            is de.dukat.freecell_compose.freecell.model.PileId.FreeCell -> state.freeCells[from.index]
-            is de.dukat.freecell_compose.freecell.model.PileId.Foundation -> state.foundations.getValue(from.suit).lastOrNull()
+            is PileId.Tableau -> state.tableau[from.index].getOrNull(move.fromIndex)
+            is PileId.FreeCell -> state.freeCells[from.index]
+            is PileId.Foundation -> state.foundations.getValue(from.suit).lastOrNull()
         }
     }
 
-    private fun cardAt(state: GameState, start: de.dukat.freecell_compose.freecell.model.CardRef): de.dukat.freecell_compose.freecell.model.Card? {
+    private fun cardAt(state: GameState, start: CardRef): Card? {
         return when (val pile = start.pile) {
-            is de.dukat.freecell_compose.freecell.model.PileId.Tableau -> state.tableau[pile.index].getOrNull(start.index)
-            is de.dukat.freecell_compose.freecell.model.PileId.FreeCell -> state.freeCells[pile.index]
-            is de.dukat.freecell_compose.freecell.model.PileId.Foundation -> state.foundations.getValue(pile.suit).lastOrNull()
+            is PileId.Tableau -> state.tableau[pile.index].getOrNull(start.index)
+            is PileId.FreeCell -> state.freeCells[pile.index]
+            is PileId.Foundation -> state.foundations.getValue(pile.suit).lastOrNull()
         }
     }
 }

@@ -79,6 +79,38 @@ class FreecellStoreTest {
     }
 
     @Test
+    fun pickClickMove_matchesTryClickMoveSelection() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Spades, 6)),
+                listOf(Card(Suit.Hearts, 7)),
+                listOf(Card(Suit.Diamonds, 7)),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+            ),
+            freeCells = List(4) { null },
+            foundations = Suit.entries.associateWith { emptyList<Card>() },
+        )
+
+        val store = FreecellStore(state)
+
+        assertEquals(
+            Move(from = PileId.Tableau(0), fromIndex = 0, to = PileId.Tableau(1), count = 1),
+            store.pickClickMove(CardRef(PileId.Tableau(0), 0))
+        )
+
+        store.tryClickMove(CardRef(PileId.Tableau(0), 0))
+
+        assertEquals(
+            Move(from = PileId.Tableau(1), fromIndex = 1, to = PileId.Tableau(2), count = 1),
+            store.pickClickMove(CardRef(PileId.Tableau(1), 1))
+        )
+    }
+
+    @Test
     fun tryClickMove_prefersFoundationThenEmptyColumnBeforeFreeCell() {
         val state = GameState(
             tableau = listOf(

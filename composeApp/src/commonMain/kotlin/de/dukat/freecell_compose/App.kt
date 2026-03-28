@@ -32,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.Animatable
@@ -72,6 +73,7 @@ import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import de.dukat.freecell_compose.freecell.FreecellStore
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -99,28 +101,22 @@ fun App() {
         var autoAnim by remember { mutableStateOf<AutoAnim?>(null) }
         var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
         var autoSolveHold by remember { mutableStateOf(false) }
+        val scope = rememberCoroutineScope()
 
-        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoSolveHold) {
-            if (drag.value != null) return@LaunchedEffect
-            if (autoAnim != null) return@LaunchedEffect
-            if (autoSolveHold) return@LaunchedEffect
-
-            val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
-
-            // Wait for layout to produce rects.
+        suspend fun animateMove(moveState: GameState, move: Move, apply: () -> Unit) {
             var fromRect: Rect? = null
             var toRect: Rect? = null
             repeat(6) {
-                fromRect = cardRects.get(startForMove(state, move))
+                fromRect = cardRects.get(startForMove(moveState, move))
                 toRect = pileRects.get(move.to)
                 if (fromRect != null && toRect != null) return@repeat
                 withFrameNanos { }
             }
 
-            val extracted = extractAutoMoveCard(state, move)
+            val extracted = extractAutoMoveCard(moveState, move)
             if (extracted == null || toRect == null || fromRect == null) {
-                store.tryMove(move)
-                return@LaunchedEffect
+                apply()
+                return
             }
 
             val progress = Animatable(0f)
@@ -135,12 +131,23 @@ fun App() {
                 )
                 progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
             } finally {
-                // When the move is applied, the state changes and this effect restarts.
-                // Clear the animation first so we don't get stuck in "autoAnim != null".
+                // Clear first so subsequent click or auto moves can start immediately after the state update.
                 autoAnim = null
             }
 
-            store.tryMove(move)
+            apply()
+        }
+
+        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoSolveHold) {
+            if (drag.value != null) return@LaunchedEffect
+            if (autoAnim != null) return@LaunchedEffect
+            if (autoSolveHold) return@LaunchedEffect
+
+            val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
+
+            animateMove(state, move) {
+                store.tryMove(move)
+            }
             delay(60)
         }
 
@@ -379,7 +386,16 @@ fun App() {
 
                 fun tryClickMove(start: CardRef) {
                     autoSolveHold = false
-                    store.tryClickMove(start)
+                    if (drag.value != null || autoAnim != null) return
+
+                    val moveState = store.uiState.value.state
+                    val move = store.pickClickMove(start) ?: return
+
+                    scope.launch {
+                        animateMove(moveState, move) {
+                            store.tryMove(move)
+                        }
+                    }
                 }
 
                     // Top row: freecells + foundations
