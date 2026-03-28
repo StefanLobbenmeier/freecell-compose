@@ -113,7 +113,7 @@ fun App() {
                 withFrameNanos { }
             }
 
-            val extracted = extractAutoMoveCard(moveState, move)
+            val extracted = extractAutoMoveStack(moveState, move)
             if (extracted == null || toRect == null || fromRect == null) {
                 apply()
                 return
@@ -124,7 +124,7 @@ fun App() {
                 autoAnim = AutoAnim(
                     move = move,
                     from = extracted.from,
-                    card = extracted.card,
+                    cards = extracted.cards,
                     fromRect = fromRect,
                     toRect = toRect,
                     progress = progress,
@@ -420,7 +420,7 @@ fun App() {
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
                                 dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
-                                hideCard = autoAnim?.from == CardRef(PileId.FreeCell(i), 0),
+                                hideCard = autoAnim?.let { isHiddenInAutoAnim(CardRef(PileId.FreeCell(i), 0), it) } == true,
                             )
                         }
                     }
@@ -442,6 +442,7 @@ fun App() {
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
                                 dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
+                                hideCard = autoAnim?.let { isHiddenInAutoAnim(CardRef(PileId.Foundation(suit), 0), it) } == true,
                             )
                         }
                     }
@@ -468,11 +469,12 @@ fun App() {
                               cardRects = cardRects,
                               onMove = ::tryMove,
                               onClickMove = ::tryClickMove,
-                              renderCardFace = renderCardFace,
-                              highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
-                              dim = isDimmingPile(drag.value, PileId.Tableau(col)),
-                             hiddenCard = autoAnim?.from,
-                         )
+                               renderCardFace = renderCardFace,
+                               highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
+                               dim = isDimmingPile(drag.value, PileId.Tableau(col)),
+                              hiddenStart = autoAnim?.from,
+                              hiddenCount = autoAnim?.cards?.size ?: 0,
+                          )
                      }
                     }
             }
@@ -492,7 +494,21 @@ fun App() {
                             .offset { IntOffset(pos.x.roundToInt(), pos.y.roundToInt()) }
                             .alpha(0.98f)
                     ) {
-                        renderCardFace(a.card, CardFaceProps())
+                        val stackH = if (a.cards.isEmpty()) cardH else (cardH + (stackGapY * (a.cards.size - 1)))
+                        Box(
+                            modifier = Modifier
+                                .width(cardW)
+                                .height(stackH)
+                        ) {
+                            for ((i, card) in a.cards.withIndex()) {
+                                renderCardFace(
+                                    card,
+                                    CardFaceProps(
+                                        modifier = Modifier.offset(y = stackGapY * i),
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -609,35 +625,46 @@ private class CardRects {
 private data class AutoAnim(
     val move: Move,
     val from: CardRef,
-    val card: Card,
+    val cards: List<Card>,
     val fromRect: Rect,
     val toRect: Rect,
     val progress: Animatable<Float, *>,
 )
 
-private data class AutoMoveCard(
+private data class AutoMoveStack(
     val from: CardRef,
-    val card: Card,
+    val cards: List<Card>,
 )
 
-private fun extractAutoMoveCard(state: GameState, move: Move): AutoMoveCard? {
+private fun extractAutoMoveStack(state: GameState, move: Move): AutoMoveStack? {
     return when (val from = move.from) {
         is PileId.Tableau -> {
             val col = state.tableau[from.index]
-            val card = col.lastOrNull() ?: return null
-            AutoMoveCard(from = CardRef(from, col.lastIndex), card = card)
+            if (move.fromIndex !in col.indices) return null
+            val cards = col.subList(move.fromIndex, col.size)
+            if (cards.size != move.count) return null
+            AutoMoveStack(from = CardRef(from, move.fromIndex), cards = cards)
         }
 
         is PileId.FreeCell -> {
             val card = state.freeCells[from.index] ?: return null
-            AutoMoveCard(from = CardRef(from, 0), card = card)
+            AutoMoveStack(from = CardRef(from, 0), cards = listOf(card))
         }
 
-        is PileId.Foundation -> null
+        is PileId.Foundation -> {
+            val card = state.foundations.getValue(from.suit).lastOrNull() ?: return null
+            AutoMoveStack(from = CardRef(from, 0), cards = listOf(card))
+        }
     }
 }
 
-private fun startForMove(state: GameState, move: Move): CardRef? = extractAutoMoveCard(state, move)?.from
+private fun startForMove(state: GameState, move: Move): CardRef? = extractAutoMoveStack(state, move)?.from
+
+private fun isHiddenInAutoAnim(ref: CardRef, autoAnim: AutoAnim): Boolean {
+    if (ref.pile != autoAnim.from.pile) return false
+    val endExclusive = autoAnim.from.index + autoAnim.cards.size
+    return ref.index in autoAnim.from.index until endExclusive
+}
 
 @Composable
 private fun PileSlot(
@@ -743,7 +770,8 @@ private fun TableauColumn(
     renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
-    hiddenCard: CardRef? = null,
+    hiddenStart: CardRef? = null,
+    hiddenCount: Int = 0,
 ) {
     val cards = state.tableau[col]
     val pileId = PileId.Tableau(col)
@@ -790,11 +818,14 @@ private fun TableauColumn(
                      val ghost = dragStartIndex != null && i >= dragStartIndex
                     // If the card directly above is currently moving (drag or auto-move),
                     // render this one with the full face so it becomes readable immediately.
-                    val autoAboveIsMoving = hiddenCard?.let { it.pile == pileId && it.index == (i + 1) } == true
+                    val autoAboveIsMoving = hiddenStart?.let { it.pile == pileId && it.index == (i + 1) } == true
                     val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) || autoAboveIsMoving
                      val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
+                     val hiddenByAutoAnim = hiddenStart?.let {
+                         it.pile == pileId && i in it.index until (it.index + hiddenCount)
+                     } == true
                      val faceAlpha = when {
-                         hiddenCard == start -> 0f
+                         hiddenByAutoAnim -> 0f
                          ghost -> 0.25f
                          else -> 1f
                      }
