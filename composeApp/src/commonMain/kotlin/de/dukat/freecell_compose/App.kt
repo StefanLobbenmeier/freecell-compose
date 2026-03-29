@@ -37,7 +37,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.material3.Icon
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +48,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -105,7 +103,7 @@ fun App() {
         var autoSolveHold by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        suspend fun animateMove(moveState: GameState, move: Move, apply: () -> Unit) {
+        suspend fun animateMove(moveState: GameState, move: Move, speed: Int = 1, apply: () -> Unit) {
             var fromRect: Rect? = null
             var toRect: Rect? = null
             repeat(6) {
@@ -131,7 +129,7 @@ fun App() {
                     toRect = toRect,
                     progress = progress,
                 )
-                progress.animateTo(1f, animationSpec = tween(durationMillis = 240))
+                progress.animateTo(1f, animationSpec = tween(durationMillis = (240 / speed).coerceAtLeast(120)))
             } finally {
                 // Clear first so subsequent click or auto moves can start immediately after the state update.
                 autoAnim = null
@@ -147,10 +145,10 @@ fun App() {
 
             val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
 
-            animateMove(state, move) {
+            val speed = analysis.safeFoundationMoves.size.coerceAtLeast(1)
+            animateMove(state, move, speed) {
                 store.tryMove(move)
             }
-            delay(60.milliseconds / analysis.safeFoundationMoves.size)
         }
 
         BoxWithConstraints(

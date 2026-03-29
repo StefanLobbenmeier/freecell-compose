@@ -150,14 +150,11 @@ fun analyze(state: GameState): Analysis {
         .asSequence()
         .filter { it.to is PileId.Foundation }
         .mapNotNull { move ->
-            val card = when (val from = move.from) {
-                is PileId.Tableau -> state.tableau[from.index].lastOrNull()
-                is PileId.FreeCell -> state.freeCells[from.index]
-                is PileId.Foundation -> null
-            } ?: return@mapNotNull null
-
-            if (isSafeToMoveToFoundation(state, card)) move else null
+            val card = state.getCardFromPile(move.from) ?: return@mapNotNull null
+            if (isSafeToMoveToFoundation(state, card)) move to card else null
         }
+        .sortedBy { (_, card) -> card.rank }
+        .map { (move, _) -> move }
         .toList()
 
     return Analysis(
@@ -166,6 +163,14 @@ fun analyze(state: GameState): Analysis {
         movesFrom = movesFrom.mapValues { it.value.toList() },
         safeFoundationMoves = safeFoundationMoves,
     )
+}
+
+private fun GameState.getCardFromPile(
+    pileId: PileId
+): Card? = when (pileId) {
+    is PileId.Tableau -> tableau[pileId.index].lastOrNull()
+    is PileId.FreeCell -> freeCells[pileId.index]
+    is PileId.Foundation -> foundations.getValue(pileId.suit).lastOrNull()
 }
 
 fun applyMove(state: GameState, move: Move): Result<GameState> {
