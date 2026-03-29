@@ -77,6 +77,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 private data class CardFaceProps(
     val showStackedHidden: Boolean = false,
@@ -148,7 +149,7 @@ fun App() {
             animateMove(state, move) {
                 store.tryMove(move)
             }
-            delay(60)
+            delay(60.milliseconds / analysis.safeFoundationMoves.size)
         }
 
         BoxWithConstraints(
