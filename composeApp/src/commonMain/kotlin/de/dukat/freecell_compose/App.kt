@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.dukat.freecell_compose.ui.SimplifiedCardFace
@@ -798,63 +799,60 @@ private fun TableauColumn(
                 pileRects.set(pileId, Rect(dropTopLeft, Size(cardWpx, cardHpx)))
             }
     ) {
-        if (cards.isEmpty()) {
+        // Classic FreeCell overlap: each next card is shifted down by gapY,
+        // so only the top portion of hidden cards remains visible.
+        val stackH = cardH + (gapY * (cards.size - 1)).coerceAtLeast(cardH)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(stackH),
+            contentAlignment = Alignment.TopCenter,
+        ) {
             EmptyTableauSlot(cardW, cardH, slotBorderW, highlight, dim)
-        } else {
-            // Classic FreeCell overlap: each next card is shifted down by gapY,
-            // so only the top portion of hidden cards remains visible.
-            val stackH = cardH + (gapY * (cards.size - 1))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(stackH),
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                 for (i in cards.indices) {
-                     val card = cards[i]
-                     val start = CardRef(pileId, i)
-                     val canStart = analysis.movableStarts.contains(start)
-                     val activeDrag = drag.value
-                     val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
-                     val ghost = dragStartIndex != null && i >= dragStartIndex
-                    // If the card directly above is currently moving (drag or auto-move),
-                    // render this one with the full face so it becomes readable immediately.
-                    val autoAboveIsMoving = hiddenStart?.let { it.pile == pileId && it.index == (i + 1) } == true
-                    val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) || autoAboveIsMoving
-                     val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
-                     val hiddenByAutoAnim = hiddenStart?.let {
-                         it.pile == pileId && i in it.index until (it.index + hiddenCount)
-                     } == true
-                     val faceAlpha = when {
-                         hiddenByAutoAnim -> 0f
-                         ghost -> 0.25f
-                         else -> 1f
-                     }
+             for (i in cards.indices) {
+                 val card = cards[i]
+                 val start = CardRef(pileId, i)
+                 val canStart = analysis.movableStarts.contains(start)
+                 val activeDrag = drag.value
+                 val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
+                 val ghost = dragStartIndex != null && i >= dragStartIndex
+                // If the card directly above is currently moving (drag or auto-move),
+                // render this one with the full face so it becomes readable immediately.
+                val autoAboveIsMoving = hiddenStart?.let { it.pile == pileId && it.index == (i + 1) } == true
+                val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) || autoAboveIsMoving
+                 val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
+                 val hiddenByAutoAnim = hiddenStart?.let {
+                     it.pile == pileId && i in it.index until (it.index + hiddenCount)
+                 } == true
+                 val faceAlpha = when {
+                     hiddenByAutoAnim -> 0f
+                     ghost -> 0.25f
+                     else -> 1f
+                 }
 
-                    Box(
-                        modifier = Modifier
-                            .offset(y = gapY * i)
+                Box(
+                    modifier = Modifier
+                        .offset(y = gapY * i)
+                ) {
+                    DraggableCardStart(
+                        start = start,
+                        cards = cards.subList(i, cards.size),
+                        analysis = analysis,
+                        drag = drag,
+                        pileRects = pileRects,
+                        cardRects = cardRects,
+                        enabled = canStart,
+                        onMove = onMove,
+                        onClickMove = onClickMove,
                     ) {
-                        DraggableCardStart(
-                            start = start,
-                            cards = cards.subList(i, cards.size),
-                            analysis = analysis,
-                            drag = drag,
-                            pileRects = pileRects,
-                            cardRects = cardRects,
-                            enabled = canStart,
-                            onMove = onMove,
-                            onClickMove = onClickMove,
-                        ) {
-                            renderCardFace(
-                                card,
-                                CardFaceProps(
-                                    showStackedHidden = showStackedHidden,
-                                    dim = !canStart && !ghost,
-                                    modifier = Modifier.alpha(faceAlpha),
-                                )
+                        renderCardFace(
+                            card,
+                            CardFaceProps(
+                                showStackedHidden = showStackedHidden,
+                                dim = !canStart && !ghost,
+                                modifier = Modifier.alpha(faceAlpha),
                             )
-                        }
+                        )
                     }
                 }
             }
