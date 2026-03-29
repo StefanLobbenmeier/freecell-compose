@@ -11,7 +11,6 @@ import de.dukat.freecell_compose.freecell.model.applyMove
 import de.dukat.freecell_compose.freecell.model.newGame as newModelGame
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 data class UiState(
     val state: GameState,
@@ -126,6 +125,10 @@ class FreecellStore(
             .filter { it.to is PileId.Foundation }
             .sortedBy { (it.to as PileId.Foundation).suit.ordinal }
 
+        val leftmostFreeCell = moves
+            .filter { it.to is PileId.FreeCell }
+            .minByOrNull { (it.to as PileId.FreeCell).index }
+
         val tableauToEmpty = moves
             .filter { move ->
                 val to = move.to
@@ -133,15 +136,11 @@ class FreecellStore(
             }
             .sortedBy { (it.to as PileId.Tableau).index }
 
-        val leftmostFreeCell = moves
-            .filter { it.to is PileId.FreeCell }
-            .minByOrNull { (it.to as PileId.FreeCell).index }
-
         return buildList {
             addAll(tableauToNonEmpty)
             addAll(foundations)
-            addAll(tableauToEmpty)
             if (leftmostFreeCell != null) add(leftmostFreeCell)
+            addAll(tableauToEmpty)
         }
     }
 
