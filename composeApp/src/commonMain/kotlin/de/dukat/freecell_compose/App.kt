@@ -68,13 +68,13 @@ import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import de.dukat.freecell_compose.freecell.FreecellStore
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_ANIMATION_DURATION_MS = 240
+private const val AUTO_MOVE_ANIMATION_DURATION_MS = 1_000
 private const val AUTO_MOVE_DELAY_MS = 100L
 
 private data class CardFaceProps(
@@ -110,13 +110,18 @@ fun App() {
         var autoSolveHold by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        fun animateMove(moveState: GameState, move: Move, apply: () -> Unit): Job? {
+        fun animateMove(
+            moveState: GameState,
+            move: Move,
+            durationMillis: Int = MOVE_ANIMATION_DURATION_MS,
+            apply: () -> Unit,
+        ) {
             val fromRect = cardRects.get(startForMove(moveState, move))
             val toRect = pileRects.get(move.to)
             val extracted = extractAutoMoveStack(moveState, move)
             apply()
 
-            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return null
+            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return
 
             val progress = Animatable(0f)
             val animation = MoveAnimation(
@@ -130,7 +135,7 @@ fun App() {
                 try {
                     progress.animateTo(
                         1f,
-                        animationSpec = tween(durationMillis = MOVE_ANIMATION_DURATION_MS),
+                        animationSpec = tween(durationMillis = durationMillis),
                     )
                 } finally {
                     moveAnimations = moveAnimations.filterNot { it === animation }
@@ -150,10 +155,13 @@ fun App() {
                     val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
                     moveAnimations.none { animation -> animation.cards.any { it in cards } }
                 } ?: continue
-                val animation = animateMove(current.state, move) {
+                animateMove(
+                    moveState = current.state,
+                    move = move,
+                    durationMillis = AUTO_MOVE_ANIMATION_DURATION_MS,
+                ) {
                     store.tryMove(move)
                 }
-                animation?.join()
             }
         }
 
