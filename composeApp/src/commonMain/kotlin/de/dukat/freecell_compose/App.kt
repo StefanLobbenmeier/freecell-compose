@@ -74,7 +74,8 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_ANIMATION_DURATION_MS = 240
-private const val AUTO_MOVE_DELAY_MS = 50L
+private const val AUTO_MOVE_ANIMATION_DURATION_MS = 1_000
+private const val AUTO_MOVE_DELAY_MS = 100L
 
 private data class CardFaceProps(
     val showStackedHidden: Boolean = false,
@@ -109,7 +110,12 @@ fun App() {
         var autoSolveHold by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        fun animateMove(moveState: GameState, move: Move, apply: () -> Unit) {
+        fun animateMove(
+            moveState: GameState,
+            move: Move,
+            durationMillis: Int = MOVE_ANIMATION_DURATION_MS,
+            apply: () -> Unit,
+        ) {
             val fromRect = cardRects.get(startForMove(moveState, move))
             val toRect = pileRects.get(move.to)
             val extracted = extractAutoMoveStack(moveState, move)
@@ -129,7 +135,7 @@ fun App() {
                 try {
                     progress.animateTo(
                         1f,
-                        animationSpec = tween(durationMillis = MOVE_ANIMATION_DURATION_MS),
+                        animationSpec = tween(durationMillis = durationMillis),
                     )
                 } finally {
                     moveAnimations = moveAnimations.filterNot { it === animation }
@@ -149,7 +155,11 @@ fun App() {
                     val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
                     moveAnimations.none { animation -> animation.cards.any { it in cards } }
                 } ?: continue
-                animateMove(current.state, move) {
+                animateMove(
+                    moveState = current.state,
+                    move = move,
+                    durationMillis = AUTO_MOVE_ANIMATION_DURATION_MS,
+                ) {
                     store.tryMove(move)
                 }
             }
@@ -454,7 +464,7 @@ fun App() {
                     }
             }
 
-                // Move overlays remain independent so auto moves can overlap.
+                // Keep each move overlay independent while its animation runs.
                 for (a in moveAnimations) {
                     val t = a.progress.value.coerceIn(0f, 1f)
                     val from = a.fromRect.topLeft - boardOriginRoot
