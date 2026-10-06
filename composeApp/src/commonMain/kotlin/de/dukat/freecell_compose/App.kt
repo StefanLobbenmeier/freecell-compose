@@ -131,7 +131,7 @@ fun App() {
                 progress = progress,
             )
             moveAnimations = moveAnimations + animation
-            return scope.launch {
+            scope.launch {
                 try {
                     progress.animateTo(
                         1f,
