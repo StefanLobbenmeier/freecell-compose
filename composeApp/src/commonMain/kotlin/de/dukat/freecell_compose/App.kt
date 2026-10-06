@@ -74,7 +74,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_ANIMATION_DURATION_MS = 240
-private const val AUTO_MOVE_DELAY_MS = 50L
+private const val AUTO_MOVE_DELAY_MS = 100L
 
 private data class CardFaceProps(
     val showStackedHidden: Boolean = false,
