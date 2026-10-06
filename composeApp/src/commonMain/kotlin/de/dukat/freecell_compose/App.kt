@@ -68,6 +68,7 @@ import de.dukat.freecell_compose.freecell.model.Move
 import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import de.dukat.freecell_compose.freecell.FreecellStore
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
@@ -109,13 +110,13 @@ fun App() {
         var autoSolveHold by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        fun animateMove(moveState: GameState, move: Move, apply: () -> Unit) {
+        fun animateMove(moveState: GameState, move: Move, apply: () -> Unit): Job? {
             val fromRect = cardRects.get(startForMove(moveState, move))
             val toRect = pileRects.get(move.to)
             val extracted = extractAutoMoveStack(moveState, move)
             apply()
 
-            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return
+            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return null
 
             val progress = Animatable(0f)
             val animation = MoveAnimation(
@@ -125,7 +126,7 @@ fun App() {
                 progress = progress,
             )
             moveAnimations = moveAnimations + animation
-            scope.launch {
+            return scope.launch {
                 try {
                     progress.animateTo(
                         1f,
@@ -149,9 +150,10 @@ fun App() {
                     val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
                     moveAnimations.none { animation -> animation.cards.any { it in cards } }
                 } ?: continue
-                animateMove(current.state, move) {
+                val animation = animateMove(current.state, move) {
                     store.tryMove(move)
                 }
+                animation?.join()
             }
         }
 
@@ -454,7 +456,7 @@ fun App() {
                     }
             }
 
-                // Move overlays remain independent so auto moves can overlap.
+                // Keep each move overlay independent while its animation runs.
                 for (a in moveAnimations) {
                     val t = a.progress.value.coerceIn(0f, 1f)
                     val from = a.fromRect.topLeft - boardOriginRoot
