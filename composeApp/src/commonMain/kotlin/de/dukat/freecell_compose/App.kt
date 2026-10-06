@@ -160,7 +160,7 @@ fun App() {
                     move = move,
                     durationMillis = AUTO_MOVE_ANIMATION_DURATION_MS,
                 ) {
-                    store.tryMove(move)
+                    store.tryAutoMove(move)
                 }
             }
         }

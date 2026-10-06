@@ -27,6 +27,7 @@ class FreecellStore(
         val state: GameState,
         val move: Move,
         val movedCard: Card,
+        val automatic: Boolean,
     )
 
     private val history = ArrayDeque<HistoryEntry>()
@@ -52,23 +53,32 @@ class FreecellStore(
     }
 
     fun undo() {
-        val prev = history.removeLastOrNull() ?: return
+        var prev = history.removeLastOrNull() ?: return
+        while (prev.automatic) {
+            prev = history.removeLastOrNull() ?: return
+        }
         publish(prev.state)
     }
 
     fun tryMove(move: Move) {
+        applyTrackedMove(move, automatic = false)
+    }
+
+    private fun applyTrackedMove(move: Move, automatic: Boolean): Boolean {
         val cur = uiState.value.state
         val movedCard = movedCardFor(cur, move)
         val r = applyMove(cur, move)
         val next = r.getOrNull()
         if (next != null) {
-            if (movedCard != null) {
-                history.addLast(HistoryEntry(state = cur, move = move, movedCard = movedCard))
+            // Opening auto moves form the baseline; there is no manual move to undo yet.
+            if (movedCard != null && (!automatic || history.isNotEmpty())) {
+                history.addLast(HistoryEntry(state = cur, move = move, movedCard = movedCard, automatic = automatic))
             }
             publish(next)
         } else {
             uiState.value = uiState.value.copy(message = r.exceptionOrNull()?.message ?: "Illegal move")
         }
+        return next != null
     }
 
     fun pickClickMove(start: CardRef): Move? {
@@ -88,14 +98,13 @@ class FreecellStore(
     }
 
     fun tryAutoSolveStep(): Move? {
-        val cur = uiState.value.state
-        val a = uiState.value.analysis
-        val move = a.safeFoundationMoves.firstOrNull() ?: return null
-        val movedCard = movedCardFor(cur, move) ?: return null
-        val next = applyMove(cur, move).getOrNull() ?: return null
-        history.addLast(HistoryEntry(state = cur, move = move, movedCard = movedCard))
-        publish(next)
-        return move
+        val move = uiState.value.analysis.safeFoundationMoves.firstOrNull() ?: return null
+        return move.takeIf { tryAutoMove(it) }
+    }
+
+    fun tryAutoMove(move: Move): Boolean {
+        if (move !in uiState.value.analysis.safeFoundationMoves) return false
+        return applyTrackedMove(move, automatic = true)
     }
 
     private fun publish(state: GameState) {
