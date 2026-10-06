@@ -32,7 +32,7 @@ import freecell_compose.composeapp.generated.resources.Res
 import freecell_compose.composeapp.generated.resources.barlow_condensed_semibold
 import org.jetbrains.compose.resources.Font
 
-internal fun cardPaperColor(dim: Boolean) = if (dim) Color(0xFFECEAE3) else Color(0xFFFFFDF7)
+internal fun cardPaperColor(dim: Boolean) = if (dim) Color(0xFFD8D5CC) else Color(0xFFFFFDF7)
 internal fun Card.ink() = if (isRed) Color(0xFFB22435) else Color(0xFF18252B)
 
 @Composable
