@@ -34,7 +34,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import kotlinx.coroutines.delay
@@ -73,7 +72,9 @@ import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
+
+private const val MOVE_ANIMATION_DURATION_MS = 240
+private const val AUTO_MOVE_DELAY_MS = 50L
 
 private data class CardFaceProps(
     val showStackedHidden: Boolean = false,
@@ -102,56 +103,55 @@ fun App() {
         val drag = remember { mutableStateOf<DragState?>(null) }
         val pileRects = remember { PileRects() }
         val cardRects = remember { CardRects() }
-        var autoAnim by remember { mutableStateOf<AutoAnim?>(null) }
+        var moveAnimations by remember { mutableStateOf<List<MoveAnimation>>(emptyList()) }
+        val flyingCards = moveAnimations.flatMap { it.cards }.toSet()
         var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
         var autoSolveHold by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
-        suspend fun animateMove(moveState: GameState, move: Move, speed: Int = 1, apply: () -> Unit) {
-            var fromRect: Rect? = null
-            var toRect: Rect? = null
-            repeat(6) {
-                fromRect = cardRects.get(startForMove(moveState, move))
-                toRect = pileRects.get(move.to)
-                if (fromRect != null && toRect != null) return@repeat
-                withFrameNanos { }
-            }
-
+        fun animateMove(moveState: GameState, move: Move, apply: () -> Unit) {
+            val fromRect = cardRects.get(startForMove(moveState, move))
+            val toRect = pileRects.get(move.to)
             val extracted = extractAutoMoveStack(moveState, move)
-            if (extracted == null || toRect == null || fromRect == null) {
-                apply()
-                return
-            }
+            apply()
+
+            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return
 
             val progress = Animatable(0f)
-            try {
-                autoAnim = AutoAnim(
-                    move = move,
-                    from = extracted.from,
-                    cards = extracted.cards,
-                    fromRect = fromRect,
-                    toRect = toRect,
-                    progress = progress,
-                )
-                progress.animateTo(1f, animationSpec = tween(durationMillis = (240 / speed).coerceAtLeast(120)))
-            } finally {
-                // Clear first so subsequent click or auto moves can start immediately after the state update.
-                autoAnim = null
+            val animation = MoveAnimation(
+                cards = extracted.cards,
+                fromRect = fromRect,
+                toRect = toRect,
+                progress = progress,
+            )
+            moveAnimations = moveAnimations + animation
+            scope.launch {
+                try {
+                    progress.animateTo(
+                        1f,
+                        animationSpec = tween(durationMillis = MOVE_ANIMATION_DURATION_MS),
+                    )
+                } finally {
+                    moveAnimations = moveAnimations.filterNot { it === animation }
+                }
             }
-
-            apply()
         }
 
-        LaunchedEffect(state, analysis.safeFoundationMoves, drag.value, autoSolveHold) {
+        LaunchedEffect(analysis.safeFoundationMoves.isNotEmpty(), drag.value != null, autoSolveHold) {
             if (drag.value != null) return@LaunchedEffect
-            if (autoAnim != null) return@LaunchedEffect
             if (autoSolveHold) return@LaunchedEffect
 
-            val move = analysis.safeFoundationMoves.firstOrNull() ?: return@LaunchedEffect
-
-            val speed = analysis.safeFoundationMoves.size.coerceAtLeast(1)
-            animateMove(state, move, speed) {
-                store.tryMove(move)
+            while (store.uiState.value.analysis.safeFoundationMoves.isNotEmpty()) {
+                delay(AUTO_MOVE_DELAY_MS)
+                if (drag.value != null || autoSolveHold) return@LaunchedEffect
+                val current = store.uiState.value
+                val move = current.analysis.safeFoundationMoves.firstOrNull { candidate ->
+                    val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
+                    moveAnimations.none { animation -> animation.cards.any { it in cards } }
+                } ?: continue
+                animateMove(current.state, move) {
+                    store.tryMove(move)
+                }
             }
         }
 
@@ -276,7 +276,7 @@ fun App() {
                         Button(onClick = {
                             val seed = seedText.toIntOrNull()
                             autoSolveHold = false
-                            autoAnim = null
+                            moveAnimations = emptyList()
                             drag.value = null
                             store.newGame(seed)
                         }) { Text("New") }
@@ -284,7 +284,7 @@ fun App() {
                         Button(
                             onClick = {
                                 autoSolveHold = true
-                                autoAnim = null
+                                moveAnimations = emptyList()
                                 drag.value = null
                                 store.undo()
                             },
@@ -325,7 +325,7 @@ fun App() {
                 Button(onClick = {
                     val seed = seedText.toIntOrNull()
                     autoSolveHold = false
-                    autoAnim = null
+                    moveAnimations = emptyList()
                     drag.value = null
                     store.newGame(seed)
                 }) { Text("New") }
@@ -333,7 +333,7 @@ fun App() {
                 Button(
                     onClick = {
                         autoSolveHold = true
-                        autoAnim = null
+                        moveAnimations = emptyList()
                         drag.value = null
                         store.undo()
                     },
@@ -362,15 +362,15 @@ fun App() {
 
                 fun tryClickMove(start: CardRef) {
                     autoSolveHold = false
-                    if (drag.value != null || autoAnim != null) return
+                    if (drag.value != null) return
 
                     val moveState = store.uiState.value.state
                     val move = store.pickClickMove(start) ?: return
+                    val cards = extractAutoMoveStack(moveState, move)?.cards.orEmpty()
+                    if (moveAnimations.any { animation -> animation.cards.any { it in cards } }) return
 
-                    scope.launch {
-                        animateMove(moveState, move) {
-                            store.tryMove(move)
-                        }
+                    animateMove(moveState, move) {
+                        store.tryMove(move)
                     }
                 }
 
@@ -396,7 +396,7 @@ fun App() {
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
                                 dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
-                                hideCard = autoAnim?.let { isHiddenInAutoAnim(CardRef(PileId.FreeCell(i), 0), it) } == true,
+                                flyingCards = flyingCards,
                             )
                         }
                     }
@@ -418,7 +418,7 @@ fun App() {
                                 renderCardFace = renderCardFace,
                                 highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
                                 dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
-                                hideCard = autoAnim?.let { isHiddenInAutoAnim(CardRef(PileId.Foundation(suit), 0), it) } == true,
+                                flyingCards = flyingCards,
                             )
                         }
                     }
@@ -448,16 +448,14 @@ fun App() {
                                renderCardFace = renderCardFace,
                                highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
                                dim = isDimmingPile(drag.value, PileId.Tableau(col)),
-                              hiddenStart = autoAnim?.from,
-                              hiddenCount = autoAnim?.cards?.size ?: 0,
+                               flyingCards = flyingCards,
                           )
                      }
                     }
             }
 
-                // Auto-solve overlay animation
-                val a = autoAnim
-                if (a != null) {
+                // Move overlays remain independent so auto moves can overlap.
+                for (a in moveAnimations) {
                     val t = a.progress.value.coerceIn(0f, 1f)
                     val from = a.fromRect.topLeft - boardOriginRoot
                     val to = a.toRect.topLeft - boardOriginRoot
@@ -598,9 +596,7 @@ private class CardRects {
     }
 }
 
-private data class AutoAnim(
-    val move: Move,
-    val from: CardRef,
+private data class MoveAnimation(
     val cards: List<Card>,
     val fromRect: Rect,
     val toRect: Rect,
@@ -636,12 +632,6 @@ private fun extractAutoMoveStack(state: GameState, move: Move): AutoMoveStack? {
 
 private fun startForMove(state: GameState, move: Move): CardRef? = extractAutoMoveStack(state, move)?.from
 
-private fun isHiddenInAutoAnim(ref: CardRef, autoAnim: AutoAnim): Boolean {
-    if (ref.pile != autoAnim.from.pile) return false
-    val endExclusive = autoAnim.from.index + autoAnim.cards.size
-    return ref.index in autoAnim.from.index until endExclusive
-}
-
 @Composable
 private fun PileSlot(
     id: PileId,
@@ -659,7 +649,7 @@ private fun PileSlot(
     renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
-    hideCard: Boolean = false,
+    flyingCards: Set<Card>,
 ) {
     val card = when (id) {
         is PileId.FreeCell -> state.freeCells[id.index]
@@ -699,6 +689,11 @@ private fun PileSlot(
         }
         if (card != null) {
             val canStart = analysis.movableStarts.contains(CardRef(id, 0))
+            val flying = card in flyingCards
+            val visibleCard = when (id) {
+                is PileId.Foundation -> state.foundations.getValue(id.suit).lastOrNull { it !in flyingCards }
+                else -> card.takeUnless { flying }
+            }
             val ghost = drag.value?.start?.pile == id
             DraggableCardStart(
                 start = CardRef(id, 0),
@@ -707,17 +702,17 @@ private fun PileSlot(
                 drag = drag,
                 pileRects = pileRects,
                 cardRects = cardRects,
-                enabled = canStart,
+                enabled = canStart && !flying,
                 onMove = onMove,
                 onClickMove = onClickMove,
             ) {
                 renderCardFace(
-                    card,
+                    visibleCard ?: card,
                     CardFaceProps(
-                        dim = !canStart && !ghost,
+                        dim = !canStart && !ghost && !flying,
                         modifier = Modifier.alpha(
                             when {
-                                hideCard -> 0f
+                                visibleCard == null -> 0f
                                 ghost -> 0.25f
                                 else -> 1f
                             }
@@ -746,8 +741,7 @@ private fun TableauColumn(
     renderCardFace: CardFaceRenderer,
     highlight: Boolean,
     dim: Boolean,
-    hiddenStart: CardRef? = null,
-    hiddenCount: Int = 0,
+    flyingCards: Set<Card>,
 ) {
     val cards = state.tableau[col]
     val pileId = PileId.Tableau(col)
@@ -790,16 +784,13 @@ private fun TableauColumn(
                  val activeDrag = drag.value
                  val dragStartIndex = if (activeDrag?.start?.pile == pileId) activeDrag.start.index else null
                  val ghost = dragStartIndex != null && i >= dragStartIndex
-                // If the card directly above is currently moving (drag or auto-move),
+                // If the card directly above is being dragged or is still in flight,
                 // render this one with the full face so it becomes readable immediately.
-                val autoAboveIsMoving = hiddenStart?.let { it.pile == pileId && it.index == (i + 1) } == true
-                val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) || autoAboveIsMoving
+                val aboveIsMoving = (dragStartIndex != null && dragStartIndex <= (i + 1)) ||
+                    (cards.getOrNull(i + 1) in flyingCards)
                  val showStackedHidden = (i < cards.lastIndex) && !aboveIsMoving && !ghost
-                 val hiddenByAutoAnim = hiddenStart?.let {
-                     it.pile == pileId && i in it.index until (it.index + hiddenCount)
-                 } == true
                  val faceAlpha = when {
-                     hiddenByAutoAnim -> 0f
+                     card in flyingCards -> 0f
                      ghost -> 0.25f
                      else -> 1f
                  }
@@ -815,7 +806,7 @@ private fun TableauColumn(
                         drag = drag,
                         pileRects = pileRects,
                         cardRects = cardRects,
-                        enabled = canStart,
+                        enabled = canStart && cards.subList(i, cards.size).none { it in flyingCards },
                         onMove = onMove,
                         onClickMove = onClickMove,
                     ) {
