@@ -1,5 +1,6 @@
 package de.dukat.freecell_compose.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -13,10 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -24,8 +28,11 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.dukat.freecell_compose.freecell.model.Card
+import freecell_compose.composeapp.generated.resources.Res
+import freecell_compose.composeapp.generated.resources.barlow_condensed_semibold
+import org.jetbrains.compose.resources.Font
 
-internal val CardPaper = Color(0xFFFFFDF7)
+internal fun cardPaperColor(dim: Boolean) = if (dim) Color(0xFFECEAE3) else Color(0xFFFFFDF7)
 internal fun Card.ink() = if (isRed) Color(0xFFB22435) else Color(0xFF18252B)
 
 @Composable
@@ -45,7 +52,7 @@ internal fun CardSurface(
             .shadow(1.dp, shape)
             .clip(shape)
             // Keep the ink at full contrast even when a card cannot be moved.
-            .background(if (dim) Color(0xFFECEAE3) else CardPaper)
+            .background(cardPaperColor(dim))
             .border(borderW, Color(0xFFCEC9BC), shape)
             .semantics { contentDescription = "${rankLabel(card.rank)} of ${card.suit.name}" },
         content = content,
@@ -83,17 +90,35 @@ fun SimplifiedCardFace(
     dim: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val inset = width * 0.045f
+    val inset = width * 0.04f
     val header = headerH.coerceAtMost(height)
-    // Reserve explicit, non-overlapping areas for the rank (including 10) and suit.
-    val rankSize = (width * if (card.rank == 10) 0.44f else 0.66f).coerceAtMost(header * 0.9f)
-    val pipSize = (width * 0.43f).coerceAtMost(header * 0.72f)
+    // Barlow Condensed fits "10" at the same font size as every other rank.
+    // Its cap height is 0.7 em: match the suit to visible ink, not the font's em box.
+    val rankSize = (width * 0.62f).coerceAtMost(header * 0.9f)
+    val capHeight = rankSize * 0.7f
+    val font = FontFamily(Font(Res.font.barlow_condensed_semibold, FontWeight.SemiBold))
+    val density = LocalDensity.current
+    val rankLayout = rememberTextMeasurer().measure(
+        rankLabel(card.rank),
+        style = TextStyle(
+            fontFamily = font,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = with(density) { rankSize.toSp() },
+            color = card.ink(),
+        ),
+        softWrap = false,
+        maxLines = 1,
+    )
     CardSurface(card, width, height, corner, borderW, dim, modifier) {
-        Box(Modifier.offset(x = inset).size(width * 0.51f, header), contentAlignment = Alignment.CenterStart) {
-            CardRank(card, rankSize)
+        Canvas(Modifier.size(width, header)) {
+            // Align the cap-height center with the suit, allowing Q its natural descender.
+            drawText(rankLayout, topLeft = Offset(
+                x = inset.toPx(),
+                y = (size.height + capHeight.toPx()) / 2f - rankLayout.firstBaseline,
+            ))
         }
-        Box(Modifier.offset(x = width - inset - pipSize).size(pipSize, header), contentAlignment = Alignment.Center) {
-            SuitPip(card.suit, card.ink(), pipSize)
+        Box(Modifier.offset(x = width - inset - capHeight).size(capHeight, header), contentAlignment = Alignment.Center) {
+            SuitPip(card.suit, card.ink(), capHeight)
         }
         if (showLargePip) {
             val bodyH = (height - header).coerceAtLeast(0.dp)
