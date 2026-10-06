@@ -1,37 +1,82 @@
 package de.dukat.freecell_compose.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.dukat.freecell_compose.freecell.model.Card
+import freecell_compose.composeapp.generated.resources.Res
+import freecell_compose.composeapp.generated.resources.barlow_condensed_semibold
+import org.jetbrains.compose.resources.Font
+
+internal fun cardPaperColor(dim: Boolean) = if (dim) Color(0xFFECEAE3) else Color(0xFFFFFDF7)
+internal fun Card.ink() = if (isRed) Color(0xFFB22435) else Color(0xFF18252B)
+
+@Composable
+internal fun CardSurface(
+    card: Card,
+    width: Dp,
+    height: Dp,
+    corner: Dp,
+    borderW: Dp,
+    dim: Boolean,
+    modifier: Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(corner)
+    Box(
+        modifier.size(width, height)
+            .shadow(1.dp, shape)
+            .clip(shape)
+            // Keep the ink at full contrast even when a card cannot be moved.
+            .background(cardPaperColor(dim))
+            .border(borderW, Color(0xFFCEC9BC), shape)
+            .semantics { contentDescription = "${rankLabel(card.rank)} of ${card.suit.name}" },
+        content = content,
+    )
+}
+
+@Composable
+internal fun CardRank(card: Card, size: Dp, modifier: Modifier = Modifier, classic: Boolean = false) {
+    val fontSize = with(LocalDensity.current) { size.toSp() }
+    Text(
+        text = rankLabel(card.rank),
+        color = card.ink(),
+        style = TextStyle(
+            fontFamily = if (classic) FontFamily.Serif else FontFamily.SansSerif,
+            fontWeight = FontWeight.Bold,
+            fontSize = fontSize,
+            lineHeight = fontSize,
+            lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both),
+        ),
+        maxLines = 1,
+        softWrap = false,
+        modifier = modifier,
+    )
+}
 
 @Composable
 fun SimplifiedCardFace(
@@ -41,126 +86,46 @@ fun SimplifiedCardFace(
     corner: Dp,
     borderW: Dp,
     headerH: Dp,
-    headerMaxH: Dp? = null,
     showLargePip: Boolean,
     dim: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    val pipColor = if (card.isRed) Color(0xFFDF0000) else Color.Black
-    val bg = Color.White
-    val shape = RoundedCornerShape(corner)
-
-    val rankText = rankLabel(card.rank)
-
-    val actualHeaderH = (if (headerMaxH != null) headerH.coerceAtMost(headerMaxH) else headerH)
-        .coerceAtMost(height)
-
-    val padX = (width * 0.03f).coerceIn(1.dp, 4.dp)
-    // Keep the header tight; we disable platform font padding below.
-    val padTop = 0.dp
-
+    val inset = width * 0.04f
+    val header = headerH.coerceAtMost(height)
+    // Barlow Condensed fits "10" at the same font size as every other rank.
+    // Its cap height is 0.7 em: match the suit to visible ink, not the font's em box.
+    val rankSize = (width * 0.62f).coerceAtMost(header * 0.9f)
+    val capHeight = rankSize * 0.7f
+    val font = FontFamily(Font(Res.font.barlow_condensed_semibold, FontWeight.SemiBold))
     val density = LocalDensity.current
-    fun minDp(a: Dp, b: Dp): Dp = if (a < b) a else b
-    val halfW = width / 2f
-    val headerUnit = minDp(halfW, actualHeaderH)
-
-    // Size text relative to the same unit as the suit icon so they scale together.
-    // Slightly oversize the rank to compensate for font metrics looking smaller than the pip.
-    val baseRankSize = with(density) { (headerUnit * 1.04f).toSp() }
-    // Two-character ranks ("10") need more room to avoid clipping.
-    val rankSize = baseRankSize *  0.74f
-    val rankStyle = TextStyle(
-        fontSize = rankSize,
-        lineHeight = rankSize,
-        fontWeight = FontWeight.Black,
-        lineHeightStyle = LineHeightStyle(
-            alignment = LineHeightStyle.Alignment.Top,
-            trim = LineHeightStyle.Trim.Both,
+    val rankLayout = rememberTextMeasurer().measure(
+        rankLabel(card.rank),
+        style = TextStyle(
+            fontFamily = font,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = with(density) { rankSize.toSp() },
+            color = card.ink(),
         ),
+        softWrap = false,
+        maxLines = 1,
     )
-
-    // Nudge the text up a bit to counteract extra ascent space.
-    val rankNudgeY = (-actualHeaderH * 0.08f).coerceIn((-3).dp, 0.dp)
-
-    val dimFilter: ColorFilter? = if (dim) {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(0.72f, 0.72f, 0.72f, 1f) })
-    } else {
-        null
-    }
-
-    // Keep pips slightly smaller than the rank for better balance at small scales.
-    val headerPipSize = headerUnit * 0.84f
-
-    val bigPipTarget = headerPipSize * 1.9f
-    val availableBelow = (height - actualHeaderH).coerceAtLeast(0.dp)
-    val bigPipSize = minDp(minDp(bigPipTarget, width * 0.88f), availableBelow * 0.92f)
-
-    Box(
-        modifier = modifier
-            .size(width, height)
-            .clip(shape)
-            .border(borderW, Color(0x26000000), shape)
-            .drawWithContent {
-                val f = dimFilter
-                if (f == null) {
-                    drawRect(bg)
-                    drawContent()
-                } else {
-                    val paint = Paint().apply { colorFilter = f }
-                    drawContext.canvas.saveLayer(Rect(Offset.Zero, size), paint)
-                    drawRect(bg)
-                    drawContent()
-                    drawContext.canvas.restore()
-                }
-            }
-    ) {
-        // Header row: huge rank left, huge suit right; whitespace in the middle.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(actualHeaderH)
-                .padding(start = padX, end = padX, top = padTop),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(halfW)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.TopStart,
-            ) {
-                Text(
-                    text = rankText,
-                    color = pipColor,
-                    style = rankStyle,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.offset(y = rankNudgeY),
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .width(halfW)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                SuitPip(
-                    suit = card.suit,
-                    color = pipColor,
-                    size = headerPipSize,
-                )
-            }
+    CardSurface(card, width, height, corner, borderW, dim, modifier) {
+        Canvas(Modifier.size(width, header)) {
+            // Align the cap-height center with the suit, allowing Q its natural descender.
+            drawText(rankLayout, topLeft = Offset(
+                x = inset.toPx(),
+                y = (size.height + capHeight.toPx()) / 2f - rankLayout.firstBaseline,
+            ))
         }
-
-        if (showLargePip && bigPipSize > 0.dp) {
-            SuitPip(
-                suit = card.suit,
-                color = pipColor,
-                size = bigPipSize,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = actualHeaderH + padX)
-            )
+        Box(Modifier.offset(x = width - inset - capHeight).size(capHeight, header), contentAlignment = Alignment.Center) {
+            SuitPip(card.suit, card.ink(), capHeight)
+        }
+        if (showLargePip) {
+            val bodyH = (height - header).coerceAtLeast(0.dp)
+            val pip = (width * 0.68f).coerceAtMost(bodyH * 0.9f)
+            Box(Modifier.offset(y = header).size(width, bodyH), contentAlignment = Alignment.Center) {
+                SuitPip(card.suit, card.ink(), pip)
+            }
         }
     }
 }

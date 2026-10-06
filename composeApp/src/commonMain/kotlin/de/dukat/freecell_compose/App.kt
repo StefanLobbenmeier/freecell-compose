@@ -3,7 +3,6 @@ package de.dukat.freecell_compose
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -46,12 +46,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -63,7 +60,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.dukat.freecell_compose.ui.SimplifiedCardFace
-import de.dukat.freecell_compose.ui.toPlayingCardVector
+import de.dukat.freecell_compose.ui.ClassicCardFace
 import de.dukat.freecell_compose.freecell.model.Analysis
 import de.dukat.freecell_compose.freecell.model.Card
 import de.dukat.freecell_compose.freecell.model.CardRef
@@ -88,7 +85,14 @@ private typealias CardFaceRenderer = @Composable (card: Card, props: CardFacePro
 
 @Composable
 fun App() {
-    MaterialTheme {
+    MaterialTheme(colorScheme = darkColorScheme(
+        primary = Color(0xFFE4D1A5),
+        onPrimary = Color(0xFF203D34),
+        surface = Color(0xFF173E33),
+        onSurface = Color(0xFFF5EDDD),
+        onSurfaceVariant = Color(0xFFD0D9CE),
+        outline = Color(0xFF789387),
+    )) {
         val store = remember { FreecellStore() }
         val ui by store.uiState.collectAsState()
         val state = ui.state
@@ -154,7 +158,7 @@ fun App() {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0E3B2B))
+                .background(Brush.verticalGradient(listOf(Color(0xFF214F42), Color(0xFF102F28))))
         ) {
             val compactTop = maxWidth < 560.dp
             val portrait = maxHeight > maxWidth
@@ -168,13 +172,13 @@ fun App() {
             // Keep all 8 tableau columns visible by scaling the whole board's measurements.
             // In portrait, make cards slimmer and increase stack spacing relative to card height
             // so hidden cards remain readable.
-            val baseCardW = if (portrait) 70.dp else 80.dp
+            val baseCardW = if (portrait) 70.dp else 104.dp
             // Mobile: aspect ratio 2:3.
             val baseCardH = if (portrait) (baseCardW * 1.5f) else (baseCardW * (112f / 80f))
-            val baseGapX = if (portrait) 8.dp else 10.dp
+            val baseGapX = if (portrait) 4.dp else 10.dp
             val baseTableGapY = if (portrait) 18.dp else 22.dp
             // Mobile: keep a full header visible for stacked cards.
-            val baseStackGapY = if (portrait) (baseCardH / 3f) else 18.dp
+            val baseStackGapY = if (portrait) (baseCardH / 3f) else 32.dp
             val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
 
             val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
@@ -190,68 +194,38 @@ fun App() {
             val stackGapY = baseStackGapY
 
             val cardCorner = cardCorner(cardW, cardH)
-            val headerHMobile = (cardH / 3f)
-            // On desktop, keep the simplified header smaller than the overlap gap so the full
-            // header remains visible for covered cards.
-            val headerMaxDesktop = (stackGapY - 2.dp).coerceIn(12.dp, 20.dp)
+            val headerHMobile = (cardW * 0.74f).coerceAtMost(stackGapY - 2.dp)
+            val headerHClassic = (cardW * 0.29f).coerceAtMost(stackGapY - 2.dp)
 
             // Scale borders with the board scale so they don't eat into content on slim screens.
             val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
             val cardBorderW = (1.dp * s).coerceIn(0.5.dp, 1.dp)
 
             val renderCardFace: CardFaceRenderer = { card, props ->
-                if (props.showStackedHidden) {
-                    if (portrait) {
-                        SimplifiedCardFace(
-                            card = card,
-                            width = cardW,
-                            height = cardH,
-                            corner = cardCorner,
-                            borderW = cardBorderW,
-                            headerH = headerHMobile,
-                            headerMaxH = null,
-                            showLargePip = false,
-                            dim = props.dim,
-                            modifier = props.modifier,
-                        )
-                    } else {
-                        SimplifiedCardFace(
-                            card = card,
-                            width = cardW,
-                            height = cardH,
-                            corner = cardCorner,
-                            borderW = cardBorderW,
-                            headerH = cardH * 0.22f,
-                            headerMaxH = headerMaxDesktop,
-                            showLargePip = false,
-                            dim = props.dim,
-                            modifier = props.modifier,
-                        )
-                    }
+                if (portrait) {
+                    SimplifiedCardFace(
+                        card = card,
+                        width = cardW,
+                        height = cardH,
+                        corner = cardCorner,
+                        borderW = cardBorderW,
+                        headerH = headerHMobile,
+                        showLargePip = !props.showStackedHidden,
+                        dim = props.dim,
+                        modifier = props.modifier,
+                    )
                 } else {
-                    if (portrait) {
-                        SimplifiedCardFace(
-                            card = card,
-                            width = cardW,
-                            height = cardH,
-                            corner = cardCorner,
-                            borderW = cardBorderW,
-                            headerH = headerHMobile,
-                            headerMaxH = null,
-                            showLargePip = true,
-                            dim = props.dim,
-                            modifier = props.modifier,
-                        )
-                    } else {
-                        CardFace(
-                            card = card,
-                            width = cardW,
-                            height = cardH,
-                            borderW = cardBorderW,
-                            dim = props.dim,
-                            modifier = props.modifier,
-                        )
-                    }
+                    ClassicCardFace(
+                        card = card,
+                        width = cardW,
+                        height = cardH,
+                        corner = cardCorner,
+                        borderW = cardBorderW,
+                        headerH = headerHClassic,
+                        showArtwork = !props.showStackedHidden,
+                        dim = props.dim,
+                        modifier = props.modifier,
+                    )
                 }
             }
 
@@ -265,7 +239,9 @@ fun App() {
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .width(cardW * 8f + gapX * 7f)
+                        .fillMaxHeight()
+                        .align(Alignment.TopCenter)
                         .verticalScroll(rememberScrollState())
                 ) {
                     if (!compactTop) {
@@ -954,62 +930,8 @@ private fun DraggableCardStart(
     }
 }
 
-@Composable
-private fun CardFace(
-    card: Card,
-    width: Dp,
-    height: Dp,
-    borderW: Dp = 1.dp,
-    dim: Boolean = false,
-    modifier: Modifier = Modifier,
-) {
-    val vector = card.toPlayingCardVector()
-
-    val corner = RoundedCornerShape(cardCorner(width, height))
-
-    val dimScale = if (dim) 0.72f else 1f
-    val dimFilter = if (dim) {
-        ColorFilter.colorMatrix(ColorMatrix().apply { setToScale(dimScale, dimScale, dimScale, 1f) })
-    } else {
-        null
-    }
-
-    Box(
-        modifier = modifier
-            .width(width)
-            .height(height)
-            .clip(corner)
-            .background(Color.Transparent)
-            .border(borderW, Color(0x22000000), corner),
-    ) {
-        PlayingCardVector(
-            vector = vector,
-            colorFilter = dimFilter,
-            modifier = Modifier.fillMaxSize(),
-        )
-    }
-}
-
-private fun cardCorner(w: Dp, h: Dp): Dp {
-    val minDim = if (w < h) w else h
-    // 80x112 used to look good with 12.dp; keep the same ratio and clamp.
-    return (minDim * 0.15f).coerceIn(4.dp, 12.dp)
-}
-
-@Composable
-private fun PlayingCardVector(
-    vector: ImageVector,
-    colorFilter: ColorFilter? = null,
-    modifier: Modifier = Modifier,
-) {
-    Image(
-        painter = rememberVectorPainter(vector),
-        contentDescription = null,
-        contentScale = ContentScale.FillBounds,
-        colorFilter = colorFilter,
-        modifier = modifier,
-    )
-}
+private fun cardCorner(w: Dp, h: Dp): Dp =
+    (minOf(w, h) * 0.065f).coerceIn(2.dp, 5.dp)
 
 private fun isHighlightingPile(d: DragState?, id: PileId): Boolean {
     if (d == null) return false
