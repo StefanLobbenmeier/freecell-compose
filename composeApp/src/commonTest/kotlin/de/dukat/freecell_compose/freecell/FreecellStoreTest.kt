@@ -8,10 +8,78 @@ import de.dukat.freecell_compose.freecell.model.PileId
 import de.dukat.freecell_compose.freecell.model.Suit
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class FreecellStoreTest {
+    private fun undoState(vararg cards: Card) = GameState(
+        tableau = listOf(cards.toList()) + List(7) { emptyList<Card>() },
+        freeCells = List(4) { null },
+        foundations = Suit.entries.associateWith { emptyList<Card>() },
+    )
+
+    @Test
+    fun undo_restoresManualMoveAndFollowingAutoMoves() {
+        val initial = undoState(Card(Suit.Clubs, 2), Card(Suit.Clubs, 1), Card(Suit.Hearts, 7))
+        val persistence = InMemoryPersistence()
+        val store = FreecellStore(initial, persistence)
+
+        store.tryMove(Move(PileId.Tableau(0), 2, PileId.FreeCell(0)))
+        assertNotNull(store.tryAutoSolveStep())
+        assertNotNull(store.tryAutoSolveStep())
+        assertTrue(store.uiState.value.canUndo)
+
+        store.undo()
+
+        assertEquals(initial, store.uiState.value.state)
+        assertEquals(initial, persistence.saved)
+        assertFalse(store.uiState.value.canUndo)
+    }
+
+    @Test
+    fun undo_revertsOnlyLastManualMoveWhenThereAreNoAutoMoves() {
+        val initial = undoState(Card(Suit.Hearts, 7))
+        val store = FreecellStore(initial, NoOpGameStatePersistence)
+        store.tryMove(Move(PileId.Tableau(0), 0, PileId.FreeCell(0)))
+        val afterFirstMove = store.uiState.value.state
+        store.tryMove(Move(PileId.FreeCell(0), 0, PileId.Tableau(1)))
+
+        store.undo()
+        assertEquals(afterFirstMove, store.uiState.value.state)
+        assertTrue(store.uiState.value.canUndo)
+
+        store.undo()
+        assertEquals(initial, store.uiState.value.state)
+        assertFalse(store.uiState.value.canUndo)
+    }
+
+    @Test
+    fun openingAutoMoves_stayAsBaselineAndDoNotEnableUndo() {
+        val store = FreecellStore(
+            undoState(Card(Suit.Hearts, 7), Card(Suit.Clubs, 2), Card(Suit.Clubs, 1)),
+            NoOpGameStatePersistence,
+        )
+
+        assertNotNull(store.tryAutoSolveStep())
+        assertFalse(store.uiState.value.canUndo)
+        assertNotNull(store.tryAutoSolveStep())
+        assertNull(store.tryAutoSolveStep())
+        val baseline = store.uiState.value.state
+        assertEquals(listOf(Card(Suit.Clubs, 1), Card(Suit.Clubs, 2)), baseline.foundations.getValue(Suit.Clubs))
+        assertFalse(store.uiState.value.canUndo)
+
+        store.undo()
+        assertEquals(baseline, store.uiState.value.state)
+
+        store.tryMove(Move(PileId.Tableau(0), 0, PileId.FreeCell(0)))
+        assertTrue(store.uiState.value.canUndo)
+        store.undo()
+        assertEquals(baseline, store.uiState.value.state)
+        assertFalse(store.uiState.value.canUndo)
+    }
+
     private class InMemoryPersistence(initial: GameState? = null) : GameStatePersistence {
         var saved: GameState? = initial
 
