@@ -1,6 +1,6 @@
-/* Simple app-shell service worker.
+/* Offline-first app-shell service worker.
  * - Caches core assets on install
- * - Serves cached content when offline
+ * - Starts from cached content without waiting for the network
  * - Updates in the background and prompts via page logic
  */
 
@@ -23,6 +23,7 @@ const CORE_ASSETS = [
 ];
 
 const INSTALL_CODE_ASSET_LIMIT = 64;
+const NAVIGATION_NETWORK_TIMEOUT_MS = 3000;
 
 function uniq(arr) {
   return Array.from(new Set(arr));
@@ -67,6 +68,16 @@ async function fetchOk(request) {
     throw new Error(`SW precache failed: ${request.url} (${status})`);
   }
   return response;
+}
+
+async function fetchWithTimeout(request, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function precacheRequest(cache, request) {
@@ -168,23 +179,28 @@ self.addEventListener('fetch', (event) => {
       const url = new URL(request.url);
 
       if (isNavigation(request)) {
-        // Always try to load a fresh HTML shell when online.
+        // The installed shell and its JS/Wasm assets belong to one atomic cache
+        // version. Return that shell immediately; registration/update checks fetch
+        // newer service workers independently in the background.
+        const cachedShell =
+          (await cache.match('./index.html', { ignoreSearch: true })) ||
+          (await cache.match('./', { ignoreSearch: true }));
+        if (cachedShell) return cachedShell;
+
+        // This is only expected before the app has completed its first install or
+        // if browser storage was evicted. Do not leave a launch hanging forever on
+        // a network that is technically online but unusable.
         const indexUrl = new URL('index.html', self.registration.scope);
         const indexRequest = new Request(indexUrl.toString(), { cache: 'no-cache' });
         try {
-          const response = await fetch(indexRequest);
+          const response = await fetchWithTimeout(indexRequest, NAVIGATION_NETWORK_TIMEOUT_MS);
           if (response && response.ok) {
-            cache.put('./', response.clone());
-            cache.put('./index.html', response.clone());
+            await cache.put('./index.html', response.clone());
             return response;
           }
           throw new Error('bad-index-response');
         } catch (_) {
-          return (
-            (await cache.match('./index.html', { ignoreSearch: true })) ||
-            (await cache.match('./', { ignoreSearch: true })) ||
-            (await cache.match('./offline.html'))
-          );
+          return (await cache.match('./offline.html')) || Response.error();
         }
       }
 
