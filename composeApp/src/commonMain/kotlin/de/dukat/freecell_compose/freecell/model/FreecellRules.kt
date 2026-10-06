@@ -32,10 +32,37 @@ fun isSafeToMoveToFoundation(state: GameState, card: Card): Boolean {
         listOf(Suit.Diamonds, Suit.Hearts)
     }
     val minOppTop = oppositeSuits.minOf { suit -> state.foundations.getValue(suit).lastOrNull()?.rank ?: 0 }
+    val sameColorSuit = Suit.entries.single { suit ->
+        suit != card.suit && suit.isRed == card.suit.isRed
+    }
+    val sameColorTop = state.foundations.getValue(sameColorSuit).lastOrNull()?.rank ?: 0
     // Heuristic: moving rank r to the foundation is considered safe when both opposite-color
     // foundations have progressed to at least r-2, so their (r-1) cards won't need this card
-    // as a tableau landing spot.
-    return minOppTop >= card.rank - 2
+    // as a tableau landing spot. Keep the other same-color foundation within three ranks too.
+    return minOppTop >= card.rank - 2 && sameColorTop >= card.rank - 3
+}
+
+private fun canUnblockFoundationProgress(state: GameState, move: Move, card: Card): Boolean {
+    val source = move.from as? PileId.Tableau ?: return false
+    var simulated = applyMove(state, move).getOrNull() ?: return false
+    var movedExposedCard = false
+
+    while (!isSafeToMoveToFoundation(simulated, card)) {
+        val exposed = simulated.tableau[source.index].lastOrNull() ?: return false
+        val foundationTop = simulated.foundations.getValue(exposed.suit).lastOrNull()
+        if (!canPlaceOnFoundation(exposed, foundationTop)) return false
+        if (!isSafeToMoveToFoundation(simulated, exposed)) return false
+
+        val exposedMove = Move(
+            from = source,
+            fromIndex = simulated.tableau[source.index].lastIndex,
+            to = PileId.Foundation(exposed.suit),
+        )
+        simulated = applyMove(simulated, exposedMove).getOrNull() ?: return false
+        movedExposedCard = true
+    }
+
+    return movedExposedCard
 }
 
 fun newGame(seed: Int? = null): GameState {
@@ -151,7 +178,10 @@ fun analyze(state: GameState): Analysis {
         .filter { it.to is PileId.Foundation }
         .mapNotNull { move ->
             val card = state.getCardFromPile(move.from) ?: return@mapNotNull null
-            if (isSafeToMoveToFoundation(state, card)) move to card else null
+            if (
+                isSafeToMoveToFoundation(state, card) ||
+                canUnblockFoundationProgress(state, move, card)
+            ) move to card else null
         }
         .sortedBy { (_, card) -> card.rank }
         .map { (move, _) -> move }

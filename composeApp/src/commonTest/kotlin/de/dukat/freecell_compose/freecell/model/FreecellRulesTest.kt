@@ -8,6 +8,8 @@ import kotlin.test.assertTrue
 
 class FreecellRulesTest {
     private fun emptyFoundations(): Map<Suit, List<Card>> = Suit.entries.associateWith { emptyList() }
+    private fun foundation(suit: Suit, throughRank: Int): List<Card> =
+        (1..throughRank).map { rank -> Card(suit, rank) }
 
     @Test
     fun isSafeToMoveToFoundation_allowsAcesAndTwos() {
@@ -41,6 +43,119 @@ class FreecellRulesTest {
             foundations = state.foundations + (Suit.Hearts to emptyList())
         )
         assertTrue(!isSafeToMoveToFoundation(blocked, Card(Suit.Clubs, 3)))
+    }
+
+    @Test
+    fun isSafeToMoveToFoundation_requiresSameColorProgressForHigherRanks() {
+        val state = GameState(
+            tableau = List(8) { emptyList() },
+            freeCells = List(4) { null },
+            foundations = mapOf(
+                Suit.Clubs to foundation(Suit.Clubs, 5),
+                Suit.Spades to foundation(Suit.Spades, 2),
+                Suit.Diamonds to foundation(Suit.Diamonds, 4),
+                Suit.Hearts to foundation(Suit.Hearts, 4),
+            ),
+        )
+
+        assertTrue(!isSafeToMoveToFoundation(state, Card(Suit.Clubs, 6)))
+        assertTrue(
+            isSafeToMoveToFoundation(
+                state.copy(foundations = state.foundations + (Suit.Spades to foundation(Suit.Spades, 3))),
+                Card(Suit.Clubs, 6),
+            )
+        )
+    }
+
+    @Test
+    fun analyze_allowsUnsafeCardThatDirectlyBlocksItsRestrainingCard() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Spades, 4), Card(Suit.Clubs, 7)),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+            ),
+            freeCells = List(4) { null },
+            foundations = mapOf(
+                Suit.Clubs to foundation(Suit.Clubs, 6),
+                Suit.Spades to foundation(Suit.Spades, 3),
+                Suit.Diamonds to foundation(Suit.Diamonds, 5),
+                Suit.Hearts to foundation(Suit.Hearts, 5),
+            ),
+        )
+
+        val move = Move(
+            from = PileId.Tableau(0),
+            fromIndex = 1,
+            to = PileId.Foundation(Suit.Clubs),
+        )
+        assertTrue(!isSafeToMoveToFoundation(state, Card(Suit.Clubs, 7)))
+        assertTrue(move in analyze(state).safeFoundationMoves)
+    }
+
+    @Test
+    fun analyze_allowsUnsafeCardWithSafeAutoMovesBeforeRestrainingCards() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Spades, 4), Card(Suit.Hearts, 5), Card(Suit.Clubs, 7)),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+            ),
+            freeCells = List(4) { null },
+            foundations = mapOf(
+                Suit.Clubs to foundation(Suit.Clubs, 6),
+                Suit.Spades to foundation(Suit.Spades, 3),
+                Suit.Diamonds to foundation(Suit.Diamonds, 5),
+                Suit.Hearts to foundation(Suit.Hearts, 4),
+            ),
+        )
+
+        val move = Move(
+            from = PileId.Tableau(0),
+            fromIndex = 2,
+            to = PileId.Foundation(Suit.Clubs),
+        )
+        assertTrue(move in analyze(state).safeFoundationMoves)
+    }
+
+    @Test
+    fun analyze_doesNotIgnoreSafetyWhenRestrainingCardIsElsewhere() {
+        val state = GameState(
+            tableau = listOf(
+                listOf(Card(Suit.Clubs, 7)),
+                listOf(Card(Suit.Spades, 4)),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+            ),
+            freeCells = List(4) { null },
+            foundations = mapOf(
+                Suit.Clubs to foundation(Suit.Clubs, 6),
+                Suit.Spades to foundation(Suit.Spades, 3),
+                Suit.Diamonds to foundation(Suit.Diamonds, 5),
+                Suit.Hearts to foundation(Suit.Hearts, 5),
+            ),
+        )
+
+        val move = Move(
+            from = PileId.Tableau(0),
+            fromIndex = 0,
+            to = PileId.Foundation(Suit.Clubs),
+        )
+        assertTrue(move !in analyze(state).safeFoundationMoves)
     }
 
     @Test
