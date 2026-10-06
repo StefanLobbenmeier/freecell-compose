@@ -74,7 +74,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 private const val MOVE_ANIMATION_DURATION_MS = 240
-private const val AUTO_MOVE_ANIMATION_DURATION_MS = 1_000
+private const val AUTO_MOVE_ANIMATION_DURATION_MS = (1.4 * MOVE_ANIMATION_DURATION_MS).toInt()
 private const val AUTO_MOVE_DELAY_MS = 100L
 
 private data class CardFaceProps(
