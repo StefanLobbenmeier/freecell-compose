@@ -76,7 +76,10 @@ class GameLibraryTest {
         val shared = SharedGame(initial, store.uiState.value.state)
         val link = gameShareLink("https://example.com/freecell/#old", shared)
         assertEquals(shared, decodeGameLink(link))
-        assertTrue(link.substringAfter("#game=").all { it.isLetterOrDigit() || it in "-_=" })
+        val encoded = link.substringAfter("#game=")
+        assertTrue(encoded.length < 150)
+        assertTrue(encoded.all { it.isLetterOrDigit() || it in "-_.~" })
+        assertFalse('=' in encoded)
         assertNull(decodeGameLink("https://example.com/#game=bad"))
         assertNull(decodeGame("x".repeat(8193)))
         val duplicate = initial.copy(tableau = initial.tableau.mapIndexed { index, cards ->

@@ -310,6 +310,9 @@ class FreecellStoreTest {
             ),
         )
 
-        assertEquals(state, decodeGameState(encodeGameState(state)))
+        val encoded = encodeGameState(state)
+
+        assertEquals("v1-aw.B.P.....-d_R_-a..AB.", encoded)
+        assertEquals(state, decodeGameState(encoded))
     }
 }
