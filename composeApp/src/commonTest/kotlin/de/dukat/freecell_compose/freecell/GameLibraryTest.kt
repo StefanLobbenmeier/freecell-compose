@@ -53,6 +53,15 @@ class GameLibraryTest {
         store.undo()
         assertEquals(0, library.state.value.won)
         assertEquals(1, library.state.value.abandoned.size)
+
+        store.tryMove(Move(PileId.Tableau(0), 0, PileId.Foundation(Suit.Spades)))
+        val next = library.start(7)
+        assertFalse(next.uiState.value.state.isWon)
+        assertEquals(2, library.activeId)
+        val reopened = GameLibrary(persistence)
+        assertEquals(2, reopened.state.value.played)
+        assertEquals(1, reopened.state.value.won)
+        assertEquals(2, reopened.state.value.abandoned.single().id)
     }
 
     @Test

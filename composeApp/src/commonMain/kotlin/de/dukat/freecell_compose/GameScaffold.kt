@@ -3,7 +3,7 @@ package de.dukat.freecell_compose
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,8 +11,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
@@ -35,14 +40,11 @@ fun App() {
         val backStack = remember { mutableStateListOf(Destination.Menu) }
         var store by remember { mutableStateOf<FreecellStore?>(null) }
         var boardGeneration by remember { mutableStateOf(0) }
-        var sharedLink by remember { mutableStateOf<String?>(null) }
         var importError by remember { mutableStateOf<String?>(null) }
-        val clipboard = LocalClipboardManager.current
 
         fun openGame(next: FreecellStore) {
             store = next
             boardGeneration++
-            sharedLink = null
             backStack.clear()
             backStack.addAll(listOf(Destination.Menu, Destination.Game))
         }
@@ -73,7 +75,6 @@ fun App() {
                     },
                     actions = {
                         if (backStack.last() == Destination.Game) TextButton(onClick = {
-                            sharedLink = null
                             backStack.add(Destination.Settings)
                         }) { Text("Settings") }
                     },
@@ -102,7 +103,9 @@ fun App() {
                                 },
                             )
                             Destination.Game -> store?.let { gameStore ->
-                                key(boardGeneration) { GameBoard(gameStore, libraryState.automaticSafeMoves) }
+                                key(boardGeneration) {
+                                    GameScreen(gameStore, libraryState, library.activeGame(), onNewGame = { openGame(library.start()) })
+                                }
                             }
                             Destination.Settings -> MenuPage {
                                 Text("Game settings", style = MaterialTheme.typography.headlineMedium)
@@ -115,23 +118,84 @@ fun App() {
                                 Button(onClick = {
                                     store = library.restart()
                                     boardGeneration++
-                                    sharedLink = null
                                     goBack()
                                 }) { Text("Restart game") }
                                 Text("Restart from the original deal. This remains the same game in your statistics.")
-                                Button(onClick = {
-                                    library.activeGame()?.let { sharedLink = gameShareLink(platformGameBaseUrl(), it.shared) }
-                                }) { Text("Share game") }
-                                sharedLink?.let { link ->
-                                    Text("The link includes the original deal and your current position.")
-                                    SelectionContainer { Text(link, style = MaterialTheme.typography.bodySmall) }
-                                    Button(onClick = { clipboard.setText(AnnotatedString(link)) }) { Text("Copy link") }
-                                }
+                                GameSharing(library.activeGame())
                             }
                         }
                     }
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun GameScreen(store: FreecellStore, libraryState: LibraryState, game: SavedGame?, onNewGame: () -> Unit) {
+    var showCompletion by remember { mutableStateOf(false) }
+    GameBoard(store, libraryState.automaticSafeMoves, onGameWon = { showCompletion = true })
+    if (showCompletion) {
+        AlertDialog(
+            onDismissRequest = { showCompletion = false },
+            title = { Text("You won!", fontFamily = FontFamily.Serif) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("All 52 cards are home. Ready for a new game?")
+                    Text("Overall statistics", style = MaterialTheme.typography.titleMedium)
+                    OverallStatistics(libraryState)
+                    GameSharing(game)
+                }
+            },
+            confirmButton = { Button(onClick = onNewGame) { Text("New game") } },
+            dismissButton = { TextButton(onClick = { showCompletion = false }) { Text("View board") } },
+        )
+    }
+}
+
+@Composable
+private fun GameSharing(game: SavedGame?) {
+    if (game == null) return
+    var link by remember(game.id) { mutableStateOf<String?>(null) }
+    var field by remember(game.id) { mutableStateOf(TextFieldValue()) }
+    var copyStatus by remember(game.id) { mutableStateOf<String?>(null) }
+    val focusRequester = remember { FocusRequester() }
+
+    fun copyLink(value: String) {
+        copyStatus = null
+        copyGameLinkToClipboard(value) { copied ->
+            copyStatus = if (copied) "Copied to clipboard" else "Couldn’t copy automatically. Select and copy the link."
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = {
+            val value = gameShareLink(platformGameBaseUrl(), game.shared)
+            link = value
+            field = TextFieldValue(value, TextRange(0, value.length))
+            copyLink(value)
+        }) { Text("Share game") }
+        link?.let { value ->
+            Text("The link includes the original deal and your current position.")
+            Box {
+                OutlinedTextField(
+                    value = field,
+                    onValueChange = { field = field.copy(selection = it.selection) },
+                    readOnly = true,
+                    label = { Text("Game link") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+                )
+                Box(Modifier.matchParentSize().clickable(onClickLabel = "Copy game link") {
+                    focusRequester.requestFocus()
+                    field = TextFieldValue(value, TextRange(0, value.length))
+                    copyLink(value)
+                })
+            }
+            copyStatus?.let { status ->
+                Text(status, style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            }
         }
     }
 }
@@ -157,13 +221,7 @@ private fun MainMenu(
     MenuPage {
         Text("A little space to play.", style = MaterialTheme.typography.headlineLarge, fontFamily = FontFamily.Serif)
         Text("Start a fresh deal or return to an unfinished game.")
-        Card(Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Statistic("Played", state.played)
-                Statistic("Won", state.won)
-                Statistic("Abandoned", state.abandoned.size)
-            }
-        }
+        OverallStatistics(state)
         OutlinedTextField(value = seed, onValueChange = { seed = it }, label = { Text("Seed (optional)") },
             singleLine = true, modifier = Modifier.fillMaxWidth(),
             isError = seed.isNotBlank() && seed.toIntOrNull() == null)
@@ -188,6 +246,17 @@ private fun MainMenu(
         OutlinedTextField(value = link, onValueChange = { link = it }, label = { Text("Game link") }, modifier = Modifier.fillMaxWidth())
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         OutlinedButton(onClick = { onImport(link) }, enabled = link.isNotBlank()) { Text("Open game") }
+    }
+}
+
+@Composable
+private fun OverallStatistics(state: LibraryState) {
+    Card(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Statistic("Played", state.played)
+            Statistic("Won", state.won)
+            Statistic("Abandoned", state.abandoned.size)
+        }
     }
 }
 

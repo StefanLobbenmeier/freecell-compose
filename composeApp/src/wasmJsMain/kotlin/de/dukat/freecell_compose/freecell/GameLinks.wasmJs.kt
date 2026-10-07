@@ -10,3 +10,10 @@ actual fun platformIncomingGameLink(): String? {
     window.history.replaceState(null, "", window.location.pathname + window.location.search)
     return link
 }
+
+@OptIn(kotlin.js.ExperimentalWasmJsInterop::class)
+private fun writeClipboard(text: String, onResult: (Boolean) -> Unit): Unit = js(
+    """{ try { if (!navigator.clipboard) { onResult(false); return; } navigator.clipboard.writeText(text).then(() => onResult(true), () => onResult(false)); } catch (_) { onResult(false); } }"""
+)
+
+actual fun copyGameLinkToClipboard(link: String, onResult: (Boolean) -> Unit) = writeClipboard(link, onResult)
