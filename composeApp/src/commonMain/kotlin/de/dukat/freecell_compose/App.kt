@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -22,8 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -46,7 +43,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -86,441 +82,344 @@ private data class CardFaceProps(
 private typealias CardFaceRenderer = @Composable (card: Card, props: CardFaceProps) -> Unit
 
 @Composable
-fun App() {
-    MaterialTheme(colorScheme = darkColorScheme(
-        primary = Color(0xFFE4D1A5),
-        onPrimary = Color(0xFF203D34),
-        surface = Color(0xFF173E33),
-        onSurface = Color(0xFFF5EDDD),
-        onSurfaceVariant = Color(0xFFD0D9CE),
-        outline = Color(0xFF789387),
-    )) {
-        val store = remember { FreecellStore() }
-        val ui by store.uiState.collectAsState()
-        val state = ui.state
-        val analysis = ui.analysis
-        var seedText by remember { mutableStateOf("") }
-        val message = ui.message
-        val drag = remember { mutableStateOf<DragState?>(null) }
-        val pileRects = remember { PileRects() }
-        val cardRects = remember { CardRects() }
-        var moveAnimations by remember { mutableStateOf<List<MoveAnimation>>(emptyList()) }
-        val flyingCards = moveAnimations.flatMap { it.cards }.toSet()
-        var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
-        var autoSolveHold by remember { mutableStateOf(false) }
-        val scope = rememberCoroutineScope()
+internal fun GameBoard(store: FreecellStore, automaticSafeMoves: Boolean) {
+    val ui by store.uiState.collectAsState()
+    val state = ui.state
+    val analysis = ui.analysis
+    val message = ui.message
+    val drag = remember { mutableStateOf<DragState?>(null) }
+    val pileRects = remember { PileRects() }
+    val cardRects = remember { CardRects() }
+    var moveAnimations by remember { mutableStateOf<List<MoveAnimation>>(emptyList()) }
+    val flyingCards = moveAnimations.flatMap { it.cards }.toSet()
+    var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
+    var autoSolveHold by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
-        fun animateMove(
-            moveState: GameState,
-            move: Move,
-            durationMillis: Int = MOVE_ANIMATION_DURATION_MS,
-            apply: () -> Unit,
-        ) {
-            val fromRect = cardRects.get(startForMove(moveState, move))
-            val toRect = pileRects.get(move.to)
-            val extracted = extractAutoMoveStack(moveState, move)
-            apply()
+    fun animateMove(
+        moveState: GameState,
+        move: Move,
+        durationMillis: Int = MOVE_ANIMATION_DURATION_MS,
+        apply: () -> Unit,
+    ) {
+        val fromRect = cardRects.get(startForMove(moveState, move))
+        val toRect = pileRects.get(move.to)
+        val extracted = extractAutoMoveStack(moveState, move)
+        apply()
 
-            if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return
+        if (store.uiState.value.state == moveState || extracted == null || toRect == null || fromRect == null) return
 
-            val progress = Animatable(0f)
-            val animation = MoveAnimation(
-                cards = extracted.cards,
-                fromRect = fromRect,
-                toRect = toRect,
-                progress = progress,
-            )
-            moveAnimations = moveAnimations + animation
-            scope.launch {
-                try {
-                    progress.animateTo(
-                        1f,
-                        animationSpec = tween(durationMillis = durationMillis),
-                    )
-                } finally {
-                    moveAnimations = moveAnimations.filterNot { it === animation }
-                }
-            }
-        }
-
-        LaunchedEffect(analysis.safeFoundationMoves.isNotEmpty(), drag.value != null, autoSolveHold) {
-            if (drag.value != null) return@LaunchedEffect
-            if (autoSolveHold) return@LaunchedEffect
-
-            while (store.uiState.value.analysis.safeFoundationMoves.isNotEmpty()) {
-                delay(AUTO_MOVE_DELAY_MS)
-                if (drag.value != null || autoSolveHold) return@LaunchedEffect
-                val current = store.uiState.value
-                val move = current.analysis.safeFoundationMoves.firstOrNull { candidate ->
-                    val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
-                    moveAnimations.none { animation -> animation.cards.any { it in cards } }
-                } ?: continue
-                animateMove(
-                    moveState = current.state,
-                    move = move,
-                    durationMillis = AUTO_MOVE_ANIMATION_DURATION_MS,
-                ) {
-                    store.tryAutoMove(move)
-                }
-            }
-        }
-
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF214F42), Color(0xFF102F28))))
-        ) {
-            val compactTop = maxWidth < 560.dp
-            val portrait = maxHeight > maxWidth
-            val mobile = maxWidth < 430.dp
-            val pagePadding = when {
-                maxWidth < 340.dp -> 4.dp
-                maxWidth < 420.dp -> 8.dp
-                else -> 16.dp
-            }
-
-            // Keep all 8 tableau columns visible by scaling the whole board's measurements.
-            // In portrait, make cards slimmer and increase stack spacing relative to card height
-            // so hidden cards remain readable.
-            val baseCardW = if (portrait) 70.dp else 104.dp
-            // Mobile: aspect ratio 2:3.
-            val baseCardH = if (portrait) (baseCardW * 1.5f) else (baseCardW * (112f / 80f))
-            val baseGapX = if (portrait) 4.dp else 10.dp
-            val baseTableGapY = if (portrait) 18.dp else 22.dp
-            // Mobile: keep a full header visible for stacked cards.
-            val baseStackGapY = if (portrait) (baseCardH / 3f) else 32.dp
-            val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
-
-            val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
-            val fitScale = (availableW / requiredTableauW).coerceAtMost(1f)
-            val s = fitScale.coerceAtLeast(0.06f)
-
-            val cardW = baseCardW * s
-            val cardH = baseCardH * s
-            val gapX = baseGapX * s
-            val tableGapY = baseTableGapY * s
-            // Don't scale down the tableau overlap spacing; otherwise hidden cards become unreadable
-            // when the board is scaled to fit slim screens.
-            val stackGapY = baseStackGapY
-
-            val cardCorner = cardCorner(cardW, cardH)
-            val headerHMobile = (cardW * 0.74f).coerceAtMost(stackGapY - 2.dp)
-            val headerHClassic = (cardW * 0.29f).coerceAtMost(stackGapY - 2.dp)
-
-            // Scale borders with the board scale so they don't eat into content on slim screens.
-            val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
-            val cardBorderW = (1.dp * s).coerceIn(0.5.dp, 1.dp)
-
-            val renderCardFace: CardFaceRenderer = { card, props ->
-                if (portrait) {
-                    SimplifiedCardFace(
-                        card = card,
-                        width = cardW,
-                        height = cardH,
-                        corner = cardCorner,
-                        borderW = cardBorderW,
-                        headerH = headerHMobile,
-                        showLargePip = !props.showStackedHidden,
-                        dim = props.dim,
-                        modifier = props.modifier,
-                    )
-                } else {
-                    ClassicCardFace(
-                        card = card,
-                        width = cardW,
-                        height = cardH,
-                        corner = cardCorner,
-                        borderW = cardBorderW,
-                        headerH = headerHClassic,
-                        showArtwork = !props.showStackedHidden,
-                        dim = props.dim,
-                        modifier = props.modifier,
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(pagePadding)
-                    .onGloballyPositioned { coords ->
-                        boardOriginRoot = coords.positionInRoot()
-                    }
-            ) {
-                Column(
-                    modifier = Modifier
-                        .width(cardW * 8f + gapX * 7f)
-                        .fillMaxHeight()
-                        .align(Alignment.TopCenter)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    if (!compactTop) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "FreeCell",
-                                    color = Color(0xFFF2E8D5),
-                                    fontFamily = FontFamily.Serif,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                if (state.isWon) {
-                                    Text("You won!", color = Color(0xFFF2E8D5), fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedTextField(
-                                    value = seedText,
-                                    onValueChange = { seedText = it.filter { ch -> ch.isDigit() || ch == '-' }.take(11) },
-                                    label = { Text("Seed") },
-                                    singleLine = true,
-                                    modifier = Modifier.width(140.dp),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                        Button(onClick = {
-                            val seed = seedText.toIntOrNull()
-                            autoSolveHold = false
-                            moveAnimations = emptyList()
-                            drag.value = null
-                            store.newGame(seed)
-                        }) { Text("New") }
-                        Spacer(Modifier.width(8.dp))
-                        Button(
-                            onClick = {
-                                autoSolveHold = true
-                                moveAnimations = emptyList()
-                                drag.value = null
-                                store.undo()
-                            },
-                            enabled = ui.canUndo,
-                        ) { Text("Undo") }
-                    }
-                }
-                    } else {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = "FreeCell",
-                                    color = Color(0xFFF2E8D5),
-                                    fontFamily = FontFamily.Serif,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                if (state.isWon) {
-                                    Text("You won!", color = Color(0xFFF2E8D5), fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                OutlinedTextField(
-                                    value = seedText,
-                                    onValueChange = { seedText = it.filter { ch -> ch.isDigit() || ch == '-' }.take(11) },
-                                    label = { Text("Seed") },
-                                    singleLine = true,
-                                    modifier = Modifier.width(120.dp),
-                                )
-                                Spacer(Modifier.width(8.dp))
-                Button(onClick = {
-                    val seed = seedText.toIntOrNull()
-                    autoSolveHold = false
-                    moveAnimations = emptyList()
-                    drag.value = null
-                    store.newGame(seed)
-                }) { Text("New") }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        autoSolveHold = true
-                        moveAnimations = emptyList()
-                        drag.value = null
-                        store.undo()
-                    },
-                    enabled = ui.canUndo,
-                ) { Text("Undo") }
+        val progress = Animatable(0f)
+        val animation = MoveAnimation(
+            cards = extracted.cards,
+            fromRect = fromRect,
+            toRect = toRect,
+            progress = progress,
+        )
+        moveAnimations = moveAnimations + animation
+        scope.launch {
+            try {
+                progress.animateTo(
+                    1f,
+                    animationSpec = tween(durationMillis = durationMillis),
+                )
+            } finally {
+                moveAnimations = moveAnimations.filterNot { it === animation }
             }
         }
     }
 
-                    Spacer(Modifier.height(12.dp))
+    LaunchedEffect(analysis.safeFoundationMoves.isNotEmpty(), drag.value != null, autoSolveHold, automaticSafeMoves) {
+        if (drag.value != null) return@LaunchedEffect
+        if (autoSolveHold || !automaticSafeMoves) return@LaunchedEffect
 
-                    if (message != null) {
-                        Text(
-                            text = message,
-                            color = Color(0xFFF2E8D5),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                        )
-                    }
+        while (store.uiState.value.analysis.safeFoundationMoves.isNotEmpty()) {
+            delay(AUTO_MOVE_DELAY_MS)
+            if (drag.value != null || autoSolveHold) return@LaunchedEffect
+            val current = store.uiState.value
+            val move = current.analysis.safeFoundationMoves.firstOrNull { candidate ->
+                val cards = extractAutoMoveStack(current.state, candidate)?.cards.orEmpty()
+                moveAnimations.none { animation -> animation.cards.any { it in cards } }
+            } ?: continue
+            animateMove(
+                moveState = current.state,
+                move = move,
+                durationMillis = AUTO_MOVE_ANIMATION_DURATION_MS,
+            ) {
+                store.tryAutoMove(move)
+            }
+        }
+    }
 
-                fun tryMove(move: Move) {
-                    autoSolveHold = false
-                    store.tryMove(move)
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF214F42), Color(0xFF102F28))))
+    ) {
+        val portrait = maxHeight > maxWidth
+        val pagePadding = when {
+            maxWidth < 340.dp -> 4.dp
+            maxWidth < 420.dp -> 8.dp
+            else -> 16.dp
+        }
+
+        // Keep all 8 tableau columns visible by scaling the whole board's measurements.
+        // In portrait, make cards slimmer and increase stack spacing relative to card height
+        // so hidden cards remain readable.
+        val baseCardW = if (portrait) 70.dp else 104.dp
+        // Mobile: aspect ratio 2:3.
+        val baseCardH = if (portrait) (baseCardW * 1.5f) else (baseCardW * (112f / 80f))
+        val baseGapX = if (portrait) 4.dp else 10.dp
+        val baseTableGapY = if (portrait) 18.dp else 22.dp
+        // Mobile: keep a full header visible for stacked cards.
+        val baseStackGapY = if (portrait) (baseCardH / 3f) else 32.dp
+        val requiredTableauW = (baseCardW * 8f) + (baseGapX * 7f)
+
+        val availableW = (maxWidth - (pagePadding * 2f) - 1.dp).coerceAtLeast(0.dp)
+        val fitScale = (availableW / requiredTableauW).coerceAtMost(1f)
+        val s = fitScale.coerceAtLeast(0.06f)
+
+        val cardW = baseCardW * s
+        val cardH = baseCardH * s
+        val gapX = baseGapX * s
+        val tableGapY = baseTableGapY * s
+        // Don't scale down the tableau overlap spacing; otherwise hidden cards become unreadable
+        // when the board is scaled to fit slim screens.
+        val stackGapY = baseStackGapY
+
+        val cardCorner = cardCorner(cardW, cardH)
+        val headerHMobile = (cardW * 0.74f).coerceAtMost(stackGapY - 2.dp)
+        val headerHClassic = (cardW * 0.29f).coerceAtMost(stackGapY - 2.dp)
+
+        // Scale borders with the board scale so they don't eat into content on slim screens.
+        val slotBorderW = (2.dp * s).coerceIn(0.75.dp, 2.dp)
+        val cardBorderW = (1.dp * s).coerceIn(0.5.dp, 1.dp)
+
+        val renderCardFace: CardFaceRenderer = { card, props ->
+            if (portrait) {
+                SimplifiedCardFace(
+                    card = card,
+                    width = cardW,
+                    height = cardH,
+                    corner = cardCorner,
+                    borderW = cardBorderW,
+                    headerH = headerHMobile,
+                    showLargePip = !props.showStackedHidden,
+                    dim = props.dim,
+                    modifier = props.modifier,
+                )
+            } else {
+                ClassicCardFace(
+                    card = card,
+                    width = cardW,
+                    height = cardH,
+                    corner = cardCorner,
+                    borderW = cardBorderW,
+                    headerH = headerHClassic,
+                    showArtwork = !props.showStackedHidden,
+                    dim = props.dim,
+                    modifier = props.modifier,
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pagePadding)
+                .onGloballyPositioned { coords ->
+                    boardOriginRoot = coords.positionInRoot()
+                }
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(cardW * 8f + gapX * 7f)
+                    .fillMaxHeight()
+                    .align(Alignment.TopCenter)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(if (state.isWon) "You won!" else "FreeCell", fontSize = 22.sp,
+                        fontFamily = FontFamily.Serif, color = Color(0xFFF2E8D5))
+                    Button(onClick = {
+                        autoSolveHold = true
+                        moveAnimations = emptyList()
+                        drag.value = null
+                        store.undo()
+                    }, enabled = ui.canUndo) { Text("Undo") }
                 }
 
-                fun tryClickMove(start: CardRef) {
-                    autoSolveHold = false
-                    if (drag.value != null) return
+                Spacer(Modifier.height(12.dp))
 
-                    val moveState = store.uiState.value.state
-                    val move = store.pickClickMove(start) ?: return
-                    val cards = extractAutoMoveStack(moveState, move)?.cards.orEmpty()
-                    if (moveAnimations.any { animation -> animation.cards.any { it in cards } }) return
-
-                    animateMove(moveState, move) {
-                        store.tryMove(move)
-                    }
+                if (message != null) {
+                    Text(
+                        text = message,
+                        color = Color(0xFFF2E8D5),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    )
                 }
 
-                    // Top row: freecells + foundations
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
-                        for (i in 0 until 4) {
-                            PileSlot(
-                                id = PileId.FreeCell(i),
-                                cardW = cardW,
-                                cardH = cardH,
-                                slotBorderW = slotBorderW,
-                                state = state,
-                                analysis = analysis,
-                                drag = drag,
-                                pileRects = pileRects,
-                                cardRects = cardRects,
-                                onMove = ::tryMove,
-                                onClickMove = ::tryClickMove,
-                                renderCardFace = renderCardFace,
-                                highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
-                                dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
-                                flyingCards = flyingCards,
-                            )
-                        }
-                    }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
-                        for (suit in Suit.entries) {
-                            PileSlot(
-                                id = PileId.Foundation(suit),
-                                cardW = cardW,
-                                cardH = cardH,
-                                slotBorderW = slotBorderW,
-                                state = state,
-                                analysis = analysis,
-                                drag = drag,
-                                pileRects = pileRects,
-                                cardRects = cardRects,
-                                onMove = ::tryMove,
-                                onClickMove = ::tryClickMove,
-                                renderCardFace = renderCardFace,
-                                highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
-                                dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
-                                flyingCards = flyingCards,
-                            )
-                        }
-                    }
-                    }
-
-                Spacer(Modifier.height(tableGapY))
-
-                    // Tableaus
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(gapX),
-                    ) {
-                    for (col in 0 until 8) {
-                        TableauColumn(
-                             col = col,
-                             cardW = cardW,
-                             cardH = cardH,
-                             gapY = stackGapY,
-                             slotBorderW = slotBorderW,
-                             state = state,
-                             analysis = analysis,
-                              drag = drag,
-                              pileRects = pileRects,
-                              cardRects = cardRects,
-                              onMove = ::tryMove,
-                              onClickMove = ::tryClickMove,
-                               renderCardFace = renderCardFace,
-                               highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
-                               dim = isDimmingPile(drag.value, PileId.Tableau(col)),
-                               flyingCards = flyingCards,
-                          )
-                     }
-                    }
+            fun tryMove(move: Move) {
+                autoSolveHold = false
+                store.tryMove(move)
             }
 
-                // Keep each move overlay independent while its animation runs.
-                for (a in moveAnimations) {
-                    val t = a.progress.value.coerceIn(0f, 1f)
-                    val from = a.fromRect.topLeft - boardOriginRoot
-                    val to = a.toRect.topLeft - boardOriginRoot
-                    val pos = Offset(
-                        x = from.x + (to.x - from.x) * t,
-                        y = from.y + (to.y - from.y) * t,
-                    )
-                    Box(
-                        modifier = Modifier
-                            .offset { IntOffset(pos.x.roundToInt(), pos.y.roundToInt()) }
-                            .alpha(0.98f)
-                    ) {
-                        val stackH = if (a.cards.isEmpty()) cardH else (cardH + (stackGapY * (a.cards.size - 1)))
-                        Box(
-                            modifier = Modifier
-                                .width(cardW)
-                                .height(stackH)
-                        ) {
-                            for ((i, card) in a.cards.withIndex()) {
-                                renderCardFace(
-                                    card,
-                                    CardFaceProps(
-                                        modifier = Modifier.offset(y = stackGapY * i),
-                                    )
-                                )
-                            }
-                        }
+            fun tryClickMove(start: CardRef) {
+                autoSolveHold = false
+                if (drag.value != null) return
+
+                val moveState = store.uiState.value.state
+                val move = store.pickClickMove(start) ?: return
+                val cards = extractAutoMoveStack(moveState, move)?.cards.orEmpty()
+                if (moveAnimations.any { animation -> animation.cards.any { it in cards } }) return
+
+                animateMove(moveState, move) {
+                    store.tryMove(move)
+                }
+            }
+
+                // Top row: freecells + foundations
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
+                    for (i in 0 until 4) {
+                        PileSlot(
+                            id = PileId.FreeCell(i),
+                            cardW = cardW,
+                            cardH = cardH,
+                            slotBorderW = slotBorderW,
+                            state = state,
+                            analysis = analysis,
+                            drag = drag,
+                            pileRects = pileRects,
+                            cardRects = cardRects,
+                            onMove = ::tryMove,
+                            onClickMove = ::tryClickMove,
+                            renderCardFace = renderCardFace,
+                            highlight = isHighlightingPile(drag.value, PileId.FreeCell(i)),
+                            dim = isDimmingPile(drag.value, PileId.FreeCell(i)),
+                            flyingCards = flyingCards,
+                        )
                     }
                 }
 
-                // Drag overlay
-                val d = drag.value
-                if (d != null) {
-                    val alpha = 0.96f
-                    val px = d.pointer
-                    val offset = px - d.grabOffsetLocal
+                    Row(horizontalArrangement = Arrangement.spacedBy(gapX)) {
+                    for (suit in Suit.entries) {
+                        PileSlot(
+                            id = PileId.Foundation(suit),
+                            cardW = cardW,
+                            cardH = cardH,
+                            slotBorderW = slotBorderW,
+                            state = state,
+                            analysis = analysis,
+                            drag = drag,
+                            pileRects = pileRects,
+                            cardRects = cardRects,
+                            onMove = ::tryMove,
+                            onClickMove = ::tryClickMove,
+                            renderCardFace = renderCardFace,
+                            highlight = isHighlightingPile(drag.value, PileId.Foundation(suit)),
+                            dim = isDimmingPile(drag.value, PileId.Foundation(suit)),
+                            flyingCards = flyingCards,
+                        )
+                    }
+                }
+                }
+
+            Spacer(Modifier.height(tableGapY))
+
+                // Tableaus
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(gapX),
+                ) {
+                for (col in 0 until 8) {
+                    TableauColumn(
+                         col = col,
+                         cardW = cardW,
+                         cardH = cardH,
+                         gapY = stackGapY,
+                         slotBorderW = slotBorderW,
+                         state = state,
+                         analysis = analysis,
+                          drag = drag,
+                          pileRects = pileRects,
+                          cardRects = cardRects,
+                          onMove = ::tryMove,
+                          onClickMove = ::tryClickMove,
+                           renderCardFace = renderCardFace,
+                           highlight = isHighlightingPile(drag.value, PileId.Tableau(col)),
+                           dim = isDimmingPile(drag.value, PileId.Tableau(col)),
+                           flyingCards = flyingCards,
+                      )
+                 }
+                }
+        }
+
+            // Keep each move overlay independent while its animation runs.
+            for (a in moveAnimations) {
+                val t = a.progress.value.coerceIn(0f, 1f)
+                val from = a.fromRect.topLeft - boardOriginRoot
+                val to = a.toRect.topLeft - boardOriginRoot
+                val pos = Offset(
+                    x = from.x + (to.x - from.x) * t,
+                    y = from.y + (to.y - from.y) * t,
+                )
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(pos.x.roundToInt(), pos.y.roundToInt()) }
+                        .alpha(0.98f)
+                ) {
+                    val stackH = if (a.cards.isEmpty()) cardH else (cardH + (stackGapY * (a.cards.size - 1)))
                     Box(
                         modifier = Modifier
-                            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
-                            .alpha(alpha)
+                            .width(cardW)
+                            .height(stackH)
                     ) {
-                        val stackH = if (d.cards.isEmpty()) cardH else (cardH + (stackGapY * (d.cards.size - 1)))
-                        Box(
-                            modifier = Modifier
-                                .width(cardW)
-                                .height(stackH)
-                        ) {
-                            for ((i, card) in d.cards.withIndex()) {
-                                renderCardFace(
-                                    card,
-                                    CardFaceProps(
-                                        modifier = Modifier.offset(y = stackGapY * i),
-                                    )
+                        for ((i, card) in a.cards.withIndex()) {
+                            renderCardFace(
+                                card,
+                                CardFaceProps(
+                                    modifier = Modifier.offset(y = stackGapY * i),
                                 )
-                            }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Drag overlay
+            val d = drag.value
+            if (d != null) {
+                val alpha = 0.96f
+                val px = d.pointer
+                val offset = px - d.grabOffsetLocal
+                Box(
+                    modifier = Modifier
+                        .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+                        .alpha(alpha)
+                ) {
+                    val stackH = if (d.cards.isEmpty()) cardH else (cardH + (stackGapY * (d.cards.size - 1)))
+                    Box(
+                        modifier = Modifier
+                            .width(cardW)
+                            .height(stackH)
+                    ) {
+                        for ((i, card) in d.cards.withIndex()) {
+                            renderCardFace(
+                                card,
+                                CardFaceProps(
+                                    modifier = Modifier.offset(y = stackGapY * i),
+                                )
+                            )
                         }
                     }
                 }
