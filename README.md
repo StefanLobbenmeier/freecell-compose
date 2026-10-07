@@ -11,14 +11,14 @@ This is a Kotlin Multiplatform project targeting Web.
 
 ### Games, statistics, and sharing
 
-The main menu starts new random or seeded games and lists unfinished games under Abandoned games.
+The main menu starts new random games and lists unfinished games under Abandoned games.
 Retry resumes the saved position. Played counts distinct games; retries and restarts keep the same
 record. Winning removes the game from Abandoned and adds it to Won. Undoing a win or restarting a
 finished game returns that record to unfinished status.
 After the final winning animation, a dialog shows overall statistics and offers a new random game
 sharing, or a return to the finished board.
 
-Settings include restart from the original deal, automatic safe foundation moves, and sharing.
+Settings are available via the gear icon on the menu and game screen. They include language, restart from the original deal, automatic safe foundation moves, and sharing.
 Share links include both the original deal and the current position. Open them in the web app or
 paste them into the main menu, including on desktop. Sharing attempts to copy the link immediately.
 The link remains visible in a read-only input; clicking it selects the full link and retries copying,
@@ -31,6 +31,24 @@ The versioned URL-safe payload contains both complete boards and validates incom
 foundations. Browser history is stored in localStorage; desktop history is stored in
 `~/.freecell-compose/game-archive.txt`. Existing single-board saves are migrated with their saved
 position as the restart baseline because the original deal was not previously stored.
+
+### Localization
+
+The app uses [Compose Multiplatform string resources](https://kotlinlang.org/docs/multiplatform/compose-localize-strings.html)
+in `composeApp/src/commonMain/composeResources`: English in `values`, German in `values-de`,
+Brazilian Portuguese in `values-pt`, and Spanish in `values-es`. The Portuguese translation also
+serves as the fallback for other Portuguese locales. Unsupported device languages fall back to English.
+Parameterized strings keep sentence ordering in the translation files; card descriptions and move
+errors are localized too. Card face rank symbols retain their standard A/J/Q/K notation.
+
+Language defaults to the system/browser locale. Settings offers System default, English, Deutsch,
+Português (Brasil), and Español. The choice updates the UI immediately and persists in browser
+localStorage or desktop Java Preferences. Returning to System default clears the override.
+Locale overrides follow the platform adapters in the official
+[resource environment guide](https://kotlinlang.org/docs/multiplatform/compose-resource-environment.html).
+The game library, navigation, board position, and undo history live outside the locale key so changing
+language preserves the current game. The browser adapter runs before Compose starts, restores the
+saved choice, and updates the document language. The offline page and update prompt share that choice.
 
 ### Build and Run Web Application
 

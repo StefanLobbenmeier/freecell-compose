@@ -46,6 +46,7 @@ internal fun CardSurface(
     modifier: Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    val description = localizedCardDescription(card)
     val shape = RoundedCornerShape(corner)
     Box(
         modifier.size(width, height)
@@ -54,7 +55,7 @@ internal fun CardSurface(
             // Keep the ink at full contrast even when a card cannot be moved.
             .background(cardPaperColor(dim))
             .border(borderW, Color(0xFFCEC9BC), shape)
-            .semantics { contentDescription = "${rankLabel(card.rank)} of ${card.suit.name}" },
+            .semantics { contentDescription = description },
         content = content,
     )
 }

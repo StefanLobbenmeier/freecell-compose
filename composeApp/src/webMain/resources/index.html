@@ -29,6 +29,7 @@
                           repeatCount="indefinite"/>
     </circle>
 </svg>
+<script src="localization.js"></script>
 <script type="application/javascript" src="composeApp.js"></script>
 
 <script>
@@ -41,7 +42,7 @@
 
         function promptToRefresh(reg) {
             if (!reg || !reg.waiting) return;
-            var ok = confirm('A new version of FreeCell is available. Reload now?');
+            var ok = confirm(window.freecellWebText('update'));
             if (ok) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
 

@@ -11,6 +11,7 @@ const CORE_ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './localization.js',
   './composeApp.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
