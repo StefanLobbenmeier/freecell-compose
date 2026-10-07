@@ -45,13 +45,15 @@ fun isSafeToMoveToFoundation(state: GameState, card: Card): Boolean {
 private fun canUnblockFoundationProgress(state: GameState, move: Move, card: Card): Boolean {
     val source = move.from as? PileId.Tableau ?: return false
     var simulated = applyMove(state, move).getOrNull() ?: return false
+    val movedCards = mutableListOf(card)
     var movedExposedCard = false
 
-    while (!isSafeToMoveToFoundation(simulated, card)) {
+    // Several unsafe cards may cover the cards needed for foundation progress. Accept the
+    // sequence only once that progress makes every card moved along the way safe.
+    while (movedCards.any { !isSafeToMoveToFoundation(simulated, it) }) {
         val exposed = simulated.tableau[source.index].lastOrNull() ?: return false
         val foundationTop = simulated.foundations.getValue(exposed.suit).lastOrNull()
         if (!canPlaceOnFoundation(exposed, foundationTop)) return false
-        if (!isSafeToMoveToFoundation(simulated, exposed)) return false
 
         val exposedMove = Move(
             from = source,
@@ -59,6 +61,7 @@ private fun canUnblockFoundationProgress(state: GameState, move: Move, card: Car
             to = PileId.Foundation(exposed.suit),
         )
         simulated = applyMove(simulated, exposedMove).getOrNull() ?: return false
+        movedCards.add(exposed)
         movedExposedCard = true
     }
 
