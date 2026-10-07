@@ -189,7 +189,7 @@ class FreecellStoreTest {
     }
 
     @Test
-    fun tryClickMove_prefersFoundationThenEmptyColumnBeforeFreeCell() {
+    fun tryClickMove_prefersFoundationThenFreeCellBeforeEmptyColumn() {
         val state = GameState(
             tableau = listOf(
                 listOf(Card(Suit.Clubs, 1)),
@@ -211,7 +211,8 @@ class FreecellStoreTest {
         assertEquals(listOf(Card(Suit.Clubs, 1)), store.uiState.value.state.foundations.getValue(Suit.Clubs))
 
         store.tryClickMove(CardRef(PileId.Foundation(Suit.Clubs), 0))
-        assertEquals(listOf(Card(Suit.Clubs, 1)), store.uiState.value.state.tableau[1])
+        assertEquals(Card(Suit.Clubs, 1), store.uiState.value.state.freeCells[0])
+        assertTrue(store.uiState.value.state.tableau[1].isEmpty())
     }
 
     @Test
