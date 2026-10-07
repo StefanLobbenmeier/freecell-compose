@@ -60,16 +60,16 @@ jobs:
         run: ./gradlew :composeApp:wasmJsBrowserDistribution --console=plain
 
       - name: Prepare Pages artifact
-        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        if: github.event_name != 'pull_request' && github.actor != 'renovate[bot]' && (github.ref_name == 'main' || github.ref_name == 'master')
         run: |
           touch composeApp/build/dist/wasmJs/productionExecutable/.nojekyll
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        if: github.event_name != 'pull_request' && github.actor != 'renovate[bot]' && (github.ref_name == 'main' || github.ref_name == 'master')
         uses: actions/upload-pages-artifact@v3
         with:
           path: composeApp/build/dist/wasmJs/productionExecutable
 
       - name: Deploy to GitHub Pages
-        if: github.event_name != 'pull_request' && (github.ref_name == 'main' || github.ref_name == 'master')
+        if: github.event_name != 'pull_request' && github.actor != 'renovate[bot]' && (github.ref_name == 'main' || github.ref_name == 'master')
         uses: actions/deploy-pages@v4
