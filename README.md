@@ -9,6 +9,25 @@ This is a Kotlin Multiplatform project targeting Web.
       Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
       folder is the appropriate location.
 
+### Games, statistics, and sharing
+
+The main menu starts new random or seeded games and lists unfinished games under Abandoned games.
+Retry resumes the saved position. Played counts distinct games; retries and restarts keep the same
+record. Winning removes the game from Abandoned and adds it to Won. Undoing a win or restarting a
+finished game returns that record to unfinished status.
+
+Settings include restart from the original deal, automatic safe foundation moves, and sharing.
+Share links include both the original deal and the current position. Open them in the web app or
+paste them into the main menu, including on desktop. Browser links use the current app URL;
+desktop links point to the project's GitHub Pages deployment.
+
+Game and share payload encoding lives in
+`composeApp/src/commonMain/kotlin/de/dukat/freecell_compose/freecell/GameCodec.kt`.
+The versioned URL-safe payload contains both complete boards and validates incoming cards and
+foundations. Browser history is stored in localStorage; desktop history is stored in
+`~/.freecell-compose/game-archive.txt`. Existing single-board saves are migrated with their saved
+position as the restart baseline because the original deal was not previously stored.
+
 ### Build and Run Web Application
 
 To build and run the development version of the web app, use the run configuration from the run widget

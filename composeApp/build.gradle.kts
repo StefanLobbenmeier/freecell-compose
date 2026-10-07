@@ -28,6 +28,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.playingcards)
+            implementation(libs.androidx.navigation3.ui)
 
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
