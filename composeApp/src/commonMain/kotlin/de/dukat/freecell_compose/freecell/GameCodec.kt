@@ -4,30 +4,41 @@ import de.dukat.freecell_compose.freecell.model.Card
 import de.dukat.freecell_compose.freecell.model.GameState
 import de.dukat.freecell_compose.freecell.model.Suit
 
-internal fun encodeGameState(state: GameState): String {
-    val tableau = state.tableau.joinToString(";") { column -> column.joinToString(",", transform = ::encodeCard) }
-    val freeCells = state.freeCells.joinToString(",") { card -> card?.let(::encodeCard) ?: "_" }
-    val foundations = Suit.entries.joinToString(";") { suit ->
-        state.foundations.getValue(suit).joinToString(",", transform = ::encodeCard)
+private const val VERSION = "v1"
+private const val CARD_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+internal fun encodeGameState(state: GameState): String = "$VERSION-${encodeGameStateBody(state)}"
+
+private fun encodeGameStateBody(state: GameState): String {
+    val tableau = state.tableau.joinToString(".") { column -> column.joinToString("", transform = ::encodeCard) }
+    val freeCells = state.freeCells.joinToString("") { card -> card?.let(::encodeCard) ?: "_" }
+    val foundations = Suit.entries.joinToString(".") { suit ->
+        state.foundations.getValue(suit).joinToString("", transform = ::encodeCard)
     }
-    return listOf("v1", tableau, freeCells, foundations).joinToString("|")
+    return listOf(tableau, freeCells, foundations).joinToString("-")
 }
 
 internal fun decodeGameState(serialized: String): GameState? {
-    val parts = serialized.split("|")
-    if (parts.size != 4 || parts[0] != "v1") return null
+    val prefix = "$VERSION-"
+    if (!serialized.startsWith(prefix)) return null
+    return decodeGameStateBody(serialized.removePrefix(prefix))
+}
 
-    val tableauParts = parts[1].split(";")
-    val freeCellParts = parts[2].split(",")
-    val foundationParts = parts[3].split(";")
+private fun decodeGameStateBody(serialized: String): GameState? {
+    val parts = serialized.split('-')
+    if (parts.size != 3) return null
 
-    if (tableauParts.size != 8 || freeCellParts.size != 4 || foundationParts.size != Suit.entries.size) return null
+    val tableauParts = parts[0].split('.')
+    val freeCellParts = parts[1]
+    val foundationParts = parts[2].split('.')
+
+    if (tableauParts.size != 8 || freeCellParts.length != 4 || foundationParts.size != Suit.entries.size) return null
 
     val tableau = tableauParts.map(::decodeCardList)
     if (tableau.any { it == null }) return null
     val freeCells = buildList {
         for (token in freeCellParts) {
-            if (token == "_") {
+            if (token == '_') {
                 add(null)
             } else {
                 add(decodeCard(token) ?: return null)
@@ -47,41 +58,31 @@ internal fun decodeGameState(serialized: String): GameState? {
     )
 }
 
-private fun encodeCard(card: Card): String = "${card.suit.name.first()}${card.rank}"
+private fun encodeCard(card: Card): String =
+    CARD_ALPHABET[card.suit.ordinal * 13 + card.rank - 1].toString()
 
 private fun decodeCardList(serialized: String): List<Card>? {
-    if (serialized.isEmpty()) return emptyList()
-    return serialized.split(",").map(::decodeCard).takeIf { it.all { card -> card != null } }?.map { it!! }
+    return serialized.map(::decodeCard).takeIf { it.all { card -> card != null } }?.map { it!! }
 }
 
-private fun decodeCard(serialized: String): Card? {
-    if (serialized.length < 2) return null
-    val suit = when (serialized.first()) {
-        'C' -> Suit.Clubs
-        'D' -> Suit.Diamonds
-        'H' -> Suit.Hearts
-        'S' -> Suit.Spades
-        else -> return null
-    }
-    val rank = serialized.drop(1).toIntOrNull() ?: return null
-    return runCatching { Card(suit, rank) }.getOrNull()
+private fun decodeCard(encoded: Char): Card? {
+    val index = CARD_ALPHABET.indexOf(encoded)
+    if (index < 0) return null
+    return Card(Suit.entries[index / 13], index % 13 + 1)
 }
 
 /** Versioned, URL-safe payload. Both positions are explicit, independent of shuffle algorithms. */
 data class SharedGame(val startingPosition: GameState, val currentState: GameState)
 
-@OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
-fun encodeGame(game: SharedGame): String = kotlin.io.encoding.Base64.UrlSafe.encode(
-    "g1~${encodeGameState(game.startingPosition)}~${encodeGameState(game.currentState)}".encodeToByteArray(),
-)
+fun encodeGame(game: SharedGame): String =
+    "$VERSION~${encodeGameStateBody(game.startingPosition)}~${encodeGameStateBody(game.currentState)}"
 
-@OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
 fun decodeGame(encoded: String): SharedGame? = runCatching {
     if (encoded.length > 8192) return null
-    val parts = kotlin.io.encoding.Base64.UrlSafe.decode(encoded).decodeToString().split('~')
-    if (parts.size != 3 || parts[0] != "g1") return null
-    val start = decodeGameState(parts[1]) ?: return null
-    val current = decodeGameState(parts[2]) ?: return null
+    val parts = encoded.split('~')
+    if (parts.size != 3 || parts[0] != VERSION) return null
+    val start = decodeGameStateBody(parts[1]) ?: return null
+    val current = decodeGameStateBody(parts[2]) ?: return null
     if (!isCompleteDeck(start) || !isCompleteDeck(current)) return null
     SharedGame(start, current)
 }.getOrNull()
