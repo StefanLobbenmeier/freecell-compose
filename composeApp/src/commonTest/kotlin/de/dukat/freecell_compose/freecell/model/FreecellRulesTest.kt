@@ -1,5 +1,6 @@
 package de.dukat.freecell_compose.freecell.model
 
+import de.dukat.freecell_compose.freecell.decodeGameLink
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -127,6 +128,88 @@ class FreecellRulesTest {
         )
         assertTrue(move in analyze(state).safeFoundationMoves)
     }
+
+    @Test
+    fun analyze_autoMovesBothBlackThreesInSharedGame() {
+        val game = assertNotNull(decodeGameLink(
+            "https://stefanlobbenmeier.github.io/freecell-compose/#game=" +
+                "v1~QFwoLkr.qvfbTIj.ZyCmxWH.agOSsih.XUBKzJ.udMVDl.YeGNpA.RncPtE-____-...~" +
+                "QFwoLkJi..ZyCmxWHgseq.zYKjIhGSr..udMVDl.vUtfE.RncP-p_XT-ab..AB.NO",
+        ))
+        var state = game.currentState
+        for (move in listOf(
+            Move(PileId.Tableau(7), 3, PileId.Foundation(Suit.Spades)),
+            Move(PileId.Tableau(7), 2, PileId.Foundation(Suit.Clubs)),
+        )) {
+            assertTrue(move in analyze(state).safeFoundationMoves)
+            state = applyMove(state, move).getOrThrow()
+        }
+
+        assertEquals(Card(Suit.Diamonds, 1), state.tableau[7].last())
+        val aceMove = Move(PileId.Tableau(7), 1, PileId.Foundation(Suit.Diamonds))
+        assertTrue(aceMove in analyze(state).safeFoundationMoves)
+        state = applyMove(state, aceMove).getOrThrow()
+        assertTrue(isSafeToMoveToFoundation(state, Card(Suit.Spades, 3)))
+        assertTrue(isSafeToMoveToFoundation(state, Card(Suit.Clubs, 3)))
+    }
+
+    @Test
+    fun analyze_allowsMultipleUnsafeCardsWhenFoundationProgressMakesThemAllSafe() {
+        var state = stackedUnsafeThrees()
+        val clubsMove = Move(PileId.Tableau(0), 2, PileId.Foundation(Suit.Clubs))
+        val spadesMove = Move(PileId.Tableau(0), 1, PileId.Foundation(Suit.Spades))
+        val aceMove = Move(PileId.Tableau(0), 0, PileId.Foundation(Suit.Hearts))
+
+        assertTrue(!isSafeToMoveToFoundation(state, Card(Suit.Clubs, 3)))
+        assertTrue(!isSafeToMoveToFoundation(state, Card(Suit.Spades, 3)))
+        for (move in listOf(clubsMove, spadesMove, aceMove)) {
+            assertTrue(move in analyze(state).safeFoundationMoves)
+            state = applyMove(state, move).getOrThrow()
+        }
+
+        assertTrue(state.tableau[0].isEmpty())
+        assertEquals(foundation(Suit.Clubs, 3), state.foundations.getValue(Suit.Clubs))
+        assertEquals(foundation(Suit.Spades, 3), state.foundations.getValue(Suit.Spades))
+        assertEquals(foundation(Suit.Hearts, 1), state.foundations.getValue(Suit.Hearts))
+    }
+
+    @Test
+    fun analyze_rejectsMultipleUnsafeCardsWhenRestrainingCardCannotMoveToFoundation() {
+        val state = stackedUnsafeThrees().copy(
+            tableau = listOf(listOf(Card(Suit.Hearts, 2), Card(Suit.Spades, 3), Card(Suit.Clubs, 3))) +
+                List(7) { emptyList() },
+        )
+        val move = Move(PileId.Tableau(0), 2, PileId.Foundation(Suit.Clubs))
+
+        assertTrue(move in analyze(state).legalMoves)
+        assertTrue(move !in analyze(state).safeFoundationMoves)
+    }
+
+    @Test
+    fun analyze_requiresAllSimulatedCardsToBecomeSafe() {
+        val state = stackedUnsafeThrees().copy(
+            tableau = listOf(listOf(Card(Suit.Hearts, 1), Card(Suit.Spades, 4), Card(Suit.Clubs, 3))) +
+                List(7) { emptyList() },
+            foundations = stackedUnsafeThrees().foundations + (Suit.Spades to foundation(Suit.Spades, 3)),
+        )
+        val move = Move(PileId.Tableau(0), 2, PileId.Foundation(Suit.Clubs))
+
+        // The ace makes the clubs three safe, but the spades four still needs both red twos.
+        assertTrue(move in analyze(state).legalMoves)
+        assertTrue(move !in analyze(state).safeFoundationMoves)
+    }
+
+    private fun stackedUnsafeThrees(): GameState = GameState(
+        tableau = listOf(listOf(Card(Suit.Hearts, 1), Card(Suit.Spades, 3), Card(Suit.Clubs, 3))) +
+            List(7) { emptyList() },
+        freeCells = List(4) { null },
+        foundations = mapOf(
+            Suit.Clubs to foundation(Suit.Clubs, 2),
+            Suit.Spades to foundation(Suit.Spades, 2),
+            Suit.Diamonds to foundation(Suit.Diamonds, 1),
+            Suit.Hearts to emptyList(),
+        ),
+    )
 
     @Test
     fun analyze_doesNotIgnoreSafetyWhenRestrainingCardIsElsewhere() {
