@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -23,6 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import de.dukat.freecell_compose.freecell.*
+import de.dukat.freecell_compose.ui.ActionIcons
+import freecell_compose.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 
 private enum class Destination { Menu, Game, Settings }
 
@@ -35,12 +40,13 @@ fun App() {
         onSurface = Color(0xFFF5EDDD), onBackground = Color(0xFFF5EDDD),
         onSurfaceVariant = Color(0xFFD0D9CE), outline = Color(0xFF789387),
     )) {
+        var language by remember { mutableStateOf(loadAppLanguage()) }
         val library = remember { GameLibrary() }
         val libraryState by library.state.collectAsState()
         val backStack = remember { mutableStateListOf(Destination.Menu) }
         var store by remember { mutableStateOf<FreecellStore?>(null) }
         var boardGeneration by remember { mutableStateOf(0) }
-        var importError by remember { mutableStateOf<String?>(null) }
+        var importError by remember { mutableStateOf<StringResource?>(null) }
 
         fun openGame(next: FreecellStore) {
             store = next
@@ -56,77 +62,111 @@ fun App() {
             platformIncomingGameLink()?.let { link ->
                 val game = decodeGameLink(link)
                 if (game != null) openGame(library.importGame(game))
-                else importError = "This game link is invalid or uses an unsupported format."
+                else importError = Res.string.invalid_link
             }
         }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(when (backStack.last()) {
-                        Destination.Menu -> "FreeCell"
-                        Destination.Game -> "Game ${library.activeId ?: ""}"
-                        Destination.Settings -> "Settings"
-                    }, fontFamily = FontFamily.Serif) },
-                    navigationIcon = {
-                        if (backStack.size > 1) TextButton(onClick = ::goBack) {
-                            Text(if (backStack.last() == Destination.Game) "Menu" else "Back")
-                        }
+        CompositionLocalProvider(LocalAppLocale provides language.tag) {
+            key(language) {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text(when (backStack.last()) {
+                                Destination.Menu -> stringResource(Res.string.app_name)
+                                Destination.Game -> stringResource(Res.string.game_number, library.activeId ?: "")
+                                Destination.Settings -> stringResource(Res.string.settings)
+                            }, fontFamily = FontFamily.Serif) },
+                            navigationIcon = {
+                                if (backStack.size > 1) IconButton(onClick = ::goBack) {
+                                    Icon(ActionIcons.Back, contentDescription = stringResource(
+                                        if (backStack.last() == Destination.Game) Res.string.menu else Res.string.back))
+                                }
+                            },
+                            actions = {
+                                if (backStack.last() != Destination.Settings) IconButton(onClick = {
+                                    backStack.add(Destination.Settings)
+                                }) { Icon(ActionIcons.Settings, contentDescription = stringResource(Res.string.settings)) }
+                            },
+                        )
                     },
-                    actions = {
-                        if (backStack.last() == Destination.Game) TextButton(onClick = {
-                            backStack.add(Destination.Settings)
-                        }) { Text("Settings") }
-                    },
-                )
-            },
-        ) { padding ->
-            NavDisplay(
-                backStack = backStack,
-                onBack = ::goBack,
-                entryDecorators = emptyList(),
-                modifier = Modifier.fillMaxSize().padding(padding),
-                entryProvider = { destination ->
-                    NavEntry(destination) {
-                        when (destination) {
-                            Destination.Menu -> MainMenu(
-                                libraryState, importError,
-                                onStart = { openGame(library.start(it)) },
-                                onRetry = { openGame(library.retry(it)) },
-                                onImport = { link ->
-                                    val game = decodeGameLink(link)
-                                    if (game == null) importError = "Enter a valid FreeCell game link."
-                                    else {
-                                        importError = null
-                                        openGame(library.importGame(game))
+                ) { padding ->
+                    NavDisplay(
+                        backStack = backStack,
+                        onBack = ::goBack,
+                        entryDecorators = emptyList(),
+                        modifier = Modifier.fillMaxSize().padding(padding),
+                        entryProvider = { destination ->
+                            NavEntry(destination) {
+                                when (destination) {
+                                    Destination.Menu -> MainMenu(
+                                        libraryState, importError,
+                                        onStart = { openGame(library.start()) },
+                                        onRetry = { openGame(library.retry(it)) },
+                                        onImport = { link ->
+                                            val game = decodeGameLink(link)
+                                            if (game == null) importError = Res.string.enter_valid_link
+                                            else {
+                                                importError = null
+                                                openGame(library.importGame(game))
+                                            }
+                                        },
+                                    )
+                                    Destination.Game -> store?.let { gameStore ->
+                                        key(boardGeneration) {
+                                            GameScreen(gameStore, libraryState, library.activeGame(), onNewGame = { openGame(library.start()) })
+                                        }
                                     }
-                                },
-                            )
-                            Destination.Game -> store?.let { gameStore ->
-                                key(boardGeneration) {
-                                    GameScreen(gameStore, libraryState, library.activeGame(), onNewGame = { openGame(library.start()) })
+                                    Destination.Settings -> MenuPage {
+                                        LanguageSettings(language) {
+                                            saveAppLanguage(it)
+                                            language = it
+                                        }
+                                        HorizontalDivider()
+                                        Text(stringResource(Res.string.game_settings), style = MaterialTheme.typography.headlineMedium)
+                                        Row(verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                            Text(stringResource(Res.string.automatic_safe_moves), modifier = Modifier.weight(1f))
+                                            val automaticMovesLabel = stringResource(Res.string.automatic_safe_moves)
+                                            Switch(checked = libraryState.automaticSafeMoves, onCheckedChange = library::setAutomaticSafeMoves,
+                                                modifier = Modifier.semantics { contentDescription = automaticMovesLabel })
+                                        }
+                                        Text(stringResource(Res.string.automatic_safe_moves_help), style = MaterialTheme.typography.bodyMedium)
+                                        if (backStack.contains(Destination.Game)) {
+                                            Button(onClick = {
+                                                store = library.restart()
+                                                boardGeneration++
+                                                goBack()
+                                            }) { Text(stringResource(Res.string.restart_game)) }
+                                            Text(stringResource(Res.string.restart_help))
+                                            GameSharing(library.activeGame())
+                                        }
+                                    }
                                 }
                             }
-                            Destination.Settings -> MenuPage {
-                                Text("Game settings", style = MaterialTheme.typography.headlineMedium)
-                                Row(verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Automatic safe moves", modifier = Modifier.weight(1f))
-                                    Switch(checked = libraryState.automaticSafeMoves, onCheckedChange = library::setAutomaticSafeMoves)
-                                }
-                                Text("Move safe cards to the foundations automatically.", style = MaterialTheme.typography.bodyMedium)
-                                Button(onClick = {
-                                    store = library.restart()
-                                    boardGeneration++
-                                    goBack()
-                                }) { Text("Restart game") }
-                                Text("Restart from the original deal. This remains the same game in your statistics.")
-                                GameSharing(library.activeGame())
-                            }
-                        }
-                    }
-                },
-            )
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LanguageSettings(language: AppLanguage, onChange: (AppLanguage) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Text(stringResource(Res.string.language), style = MaterialTheme.typography.headlineMedium)
+    Text(stringResource(Res.string.language_help))
+    Box {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(if (language == AppLanguage.System) stringResource(Res.string.system_default) else language.label)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            AppLanguage.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(if (option == AppLanguage.System) stringResource(Res.string.system_default) else option.label) },
+                    onClick = { expanded = false; onChange(option) },
+                )
+            }
         }
     }
 }
@@ -138,17 +178,17 @@ private fun GameScreen(store: FreecellStore, libraryState: LibraryState, game: S
     if (showCompletion) {
         AlertDialog(
             onDismissRequest = { showCompletion = false },
-            title = { Text("You won!", fontFamily = FontFamily.Serif) },
+            title = { Text(stringResource(Res.string.you_won), fontFamily = FontFamily.Serif) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("All 52 cards are home. Ready for a new game?")
-                    Text("Overall statistics", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.win_message))
+                    Text(stringResource(Res.string.overall_statistics), style = MaterialTheme.typography.titleMedium)
                     OverallStatistics(libraryState)
                     GameSharing(game)
                 }
             },
-            confirmButton = { Button(onClick = onNewGame) { Text("New game") } },
-            dismissButton = { TextButton(onClick = { showCompletion = false }) { Text("View board") } },
+            confirmButton = { Button(onClick = onNewGame) { Text(stringResource(Res.string.new_game)) } },
+            dismissButton = { TextButton(onClick = { showCompletion = false }) { Text(stringResource(Res.string.view_board)) } },
         )
     }
 }
@@ -158,13 +198,13 @@ private fun GameSharing(game: SavedGame?) {
     if (game == null) return
     var link by remember(game.id) { mutableStateOf<String?>(null) }
     var field by remember(game.id) { mutableStateOf(TextFieldValue()) }
-    var copyStatus by remember(game.id) { mutableStateOf<String?>(null) }
+    var copyStatus by remember(game.id) { mutableStateOf<StringResource?>(null) }
     val focusRequester = remember { FocusRequester() }
 
     fun copyLink(value: String) {
         copyStatus = null
         copyGameLinkToClipboard(value) { copied ->
-            copyStatus = if (copied) "Copied to clipboard" else "Couldn’t copy automatically. Select and copy the link."
+            copyStatus = if (copied) Res.string.copied else Res.string.copy_failed
         }
     }
 
@@ -174,26 +214,26 @@ private fun GameSharing(game: SavedGame?) {
             link = value
             field = TextFieldValue(value, TextRange(0, value.length))
             copyLink(value)
-        }) { Text("Share game") }
+        }) { Text(stringResource(Res.string.share_game)) }
         link?.let { value ->
-            Text("The link includes the original deal and your current position.")
+            Text(stringResource(Res.string.share_help))
             Box {
                 OutlinedTextField(
                     value = field,
                     onValueChange = { field = field.copy(selection = it.selection) },
                     readOnly = true,
-                    label = { Text("Game link") },
+                    label = { Text(stringResource(Res.string.game_link)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 )
-                Box(Modifier.matchParentSize().clickable(onClickLabel = "Copy game link") {
+                Box(Modifier.matchParentSize().clickable(onClickLabel = stringResource(Res.string.copy_game_link)) {
                     focusRequester.requestFocus()
                     field = TextFieldValue(value, TextRange(0, value.length))
                     copyLink(value)
                 })
             }
             copyStatus?.let { status ->
-                Text(status, style = MaterialTheme.typography.bodySmall,
+                Text(stringResource(status), style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             }
         }
@@ -213,39 +253,34 @@ private fun MenuPage(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 private fun MainMenu(
-    state: LibraryState, error: String?, onStart: (Int?) -> Unit,
+    state: LibraryState, error: StringResource?, onStart: () -> Unit,
     onRetry: (Int) -> Unit, onImport: (String) -> Unit,
 ) {
-    var seed by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
     MenuPage {
-        Text("A little space to play.", style = MaterialTheme.typography.headlineLarge, fontFamily = FontFamily.Serif)
-        Text("Start a fresh deal or return to an unfinished game.")
+        Text(stringResource(Res.string.menu_heading), style = MaterialTheme.typography.headlineLarge, fontFamily = FontFamily.Serif)
+        Text(stringResource(Res.string.menu_help))
         OverallStatistics(state)
-        OutlinedTextField(value = seed, onValueChange = { seed = it }, label = { Text("Seed (optional)") },
-            singleLine = true, modifier = Modifier.fillMaxWidth(),
-            isError = seed.isNotBlank() && seed.toIntOrNull() == null)
-        Button(onClick = { onStart(seed.toIntOrNull()) }, modifier = Modifier.fillMaxWidth(),
-            enabled = seed.isBlank() || seed.toIntOrNull() != null) { Text("Start") }
-        Text("Abandoned games", style = MaterialTheme.typography.titleLarge)
-        if (state.abandoned.isEmpty()) Text("No abandoned games yet.")
-        else Text("Retry from the saved position. Winning removes the game from this list.")
+        Button(onClick = onStart, modifier = Modifier.fillMaxWidth()) { Text(stringResource(Res.string.start)) }
+        Text(stringResource(Res.string.abandoned_games), style = MaterialTheme.typography.titleLarge)
+        if (state.abandoned.isEmpty()) Text(stringResource(Res.string.no_abandoned_games))
+        else Text(stringResource(Res.string.retry_help))
         state.abandoned.asReversed().forEach { game ->
             OutlinedCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Game ${game.id}", style = MaterialTheme.typography.titleMedium)
-                        Text("${game.currentState.foundations.values.sumOf { it.size }} / 52 cards home")
+                        Text(stringResource(Res.string.game_number, game.id), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.cards_home, game.currentState.foundations.values.sumOf { it.size }))
                     }
-                    TextButton(onClick = { onRetry(game.id) }) { Text("Retry") }
+                    TextButton(onClick = { onRetry(game.id) }) { Text(stringResource(Res.string.retry)) }
                 }
             }
         }
         HorizontalDivider()
-        Text("Open a shared game", style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(value = link, onValueChange = { link = it }, label = { Text("Game link") }, modifier = Modifier.fillMaxWidth())
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        OutlinedButton(onClick = { onImport(link) }, enabled = link.isNotBlank()) { Text("Open game") }
+        Text(stringResource(Res.string.open_shared_game), style = MaterialTheme.typography.titleLarge)
+        OutlinedTextField(value = link, onValueChange = { link = it }, label = { Text(stringResource(Res.string.game_link)) }, modifier = Modifier.fillMaxWidth())
+        error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+        OutlinedButton(onClick = { onImport(link) }, enabled = link.isNotBlank()) { Text(stringResource(Res.string.open_game)) }
     }
 }
 
@@ -253,9 +288,9 @@ private fun MainMenu(
 private fun OverallStatistics(state: LibraryState) {
     Card(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Statistic("Played", state.played)
-            Statistic("Won", state.won)
-            Statistic("Abandoned", state.abandoned.size)
+            Statistic(stringResource(Res.string.played), state.played)
+            Statistic(stringResource(Res.string.won), state.won)
+            Statistic(stringResource(Res.string.abandoned), state.abandoned.size)
         }
     }
 }

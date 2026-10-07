@@ -74,17 +74,18 @@
         }
     </style>
 </head>
-<body>
+<body data-offline>
 <div class="wrap">
     <div class="card">
-        <h1>You're offline</h1>
-        <p>FreeCell can still work offline once it's been loaded at least once while connected.</p>
+        <h1 data-i18n="offline">You're offline</h1>
+        <p data-i18n="offline_help">FreeCell can still work offline once it's been loaded at least once while connected.</p>
         <div class="row">
-            <button onclick="location.href='./'">Try opening FreeCell</button>
-            <button onclick="location.reload()">Retry</button>
+            <button data-i18n="open" onclick="location.href='./'">Try opening FreeCell</button>
+            <button data-i18n="retry" onclick="location.reload()">Retry</button>
         </div>
-        <div class="hint">Tip: When you're back online, the app will pick up new releases automatically.</div>
+        <div class="hint" data-i18n="hint">Tip: When you're back online, the app will pick up new releases automatically.</div>
     </div>
 </div>
+<script src="localization.js"></script>
 </body>
 </html>

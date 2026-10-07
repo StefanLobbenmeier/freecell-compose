@@ -20,7 +20,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import de.dukat.freecell_compose.ui.ActionIcons
+import de.dukat.freecell_compose.ui.localizedMoveError
+import freecell_compose.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -247,21 +252,21 @@ internal fun GameBoard(store: FreecellStore, automaticSafeMoves: Boolean, onGame
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Text(if (state.isWon) "You won!" else "FreeCell", fontSize = 22.sp,
+                    Text(stringResource(if (state.isWon) Res.string.you_won else Res.string.app_name), fontSize = 22.sp,
                         fontFamily = FontFamily.Serif, color = Color(0xFFF2E8D5))
-                    Button(onClick = {
+                    IconButton(onClick = {
                         autoSolveHold = true
                         moveAnimations = emptyList()
                         drag.value = null
                         store.undo()
-                    }, enabled = ui.canUndo) { Text("Undo") }
+                    }, enabled = ui.canUndo) { Icon(ActionIcons.Undo, contentDescription = stringResource(Res.string.undo)) }
                 }
 
                 Spacer(Modifier.height(12.dp))
 
                 if (message != null) {
                     Text(
-                        text = message,
+                        text = localizedMoveError(message),
                         color = Color(0xFFF2E8D5),
                         modifier = Modifier
                             .fillMaxWidth()
