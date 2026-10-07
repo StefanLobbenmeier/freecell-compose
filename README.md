@@ -15,10 +15,14 @@ The main menu starts new random or seeded games and lists unfinished games under
 Retry resumes the saved position. Played counts distinct games; retries and restarts keep the same
 record. Winning removes the game from Abandoned and adds it to Won. Undoing a win or restarting a
 finished game returns that record to unfinished status.
+After the final winning animation, a dialog shows overall statistics and offers a new random game
+sharing, or a return to the finished board.
 
 Settings include restart from the original deal, automatic safe foundation moves, and sharing.
 Share links include both the original deal and the current position. Open them in the web app or
-paste them into the main menu, including on desktop. Browser links use the current app URL;
+paste them into the main menu, including on desktop. Sharing attempts to copy the link immediately.
+The link remains visible in a read-only input; clicking it selects the full link and retries copying,
+with confirmation after a successful clipboard write. Browser links use the current app URL;
 desktop links point to the project's GitHub Pages deployment.
 
 Game and share payload encoding lives in

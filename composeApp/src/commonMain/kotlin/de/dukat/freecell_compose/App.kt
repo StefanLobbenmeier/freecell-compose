@@ -82,7 +82,7 @@ private data class CardFaceProps(
 private typealias CardFaceRenderer = @Composable (card: Card, props: CardFaceProps) -> Unit
 
 @Composable
-internal fun GameBoard(store: FreecellStore, automaticSafeMoves: Boolean) {
+internal fun GameBoard(store: FreecellStore, automaticSafeMoves: Boolean, onGameWon: () -> Unit) {
     val ui by store.uiState.collectAsState()
     val state = ui.state
     val analysis = ui.analysis
@@ -95,6 +95,10 @@ internal fun GameBoard(store: FreecellStore, automaticSafeMoves: Boolean) {
     var boardOriginRoot by remember { mutableStateOf(Offset.Zero) }
     var autoSolveHold by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(state.isWon, moveAnimations.isEmpty()) {
+        if (state.isWon && moveAnimations.isEmpty()) onGameWon()
+    }
 
     fun animateMove(
         moveState: GameState,
