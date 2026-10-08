@@ -91,6 +91,32 @@ To produce the distributable folder (includes `sw.js` and `offline.html`):
 Output folder:
 - `composeApp/build/dist/wasmJs/productionExecutable/`
 
+### Production browser tests and deployment
+
+CI tests the production Wasm distribution in Chromium with desktop and phone
+viewports before uploading a Pages artifact. The tests check startup, menu/settings/game
+navigation, persisted games after reload, and a fresh launch offline through the
+service worker. Browser exceptions fail the tests; failures include screenshots and traces.
+Run the same checks locally after building the distribution:
+
+```shell
+npm ci
+npx playwright install chromium
+npm run test:web
+```
+
+The test server uses a `.localhost` hostname and a subdirectory so service workers
+and relative asset paths work as they do on Pages. To test an existing release,
+set `WEB_TEST_URL` to its URL (including the trailing slash).
+
+Deployment is a separate job that runs only after the build and browser tests pass.
+Deployments run one at a time; a newer waiting deployment replaces an older waiting
+one. Before deploying, the job skips builds whose commit is no longer the branch
+head or which have a newer eligible workflow run. Renovate push runs build and test
+but do not deploy. To deploy those changes manually, run **CI** via **Run workflow**
+on `main`; `workflow_dispatch` overrides the Renovate restriction while retaining
+the tests, branch restriction, and stale-build checks.
+
 ---
 
 Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
