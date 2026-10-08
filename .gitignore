@@ -17,6 +17,8 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
+playwright-report/
+test-results/
 
 # Kotlin/Wasm/JS tooling caches
 kotlin-js-store/**/yarn.lock
